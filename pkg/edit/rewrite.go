@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/wilddogjp/bpx/pkg/uasset"
+	"github.com/wilddogjp/openbpx/pkg/uasset"
 )
 
 // ExportMutation describes one replacement for an export payload.

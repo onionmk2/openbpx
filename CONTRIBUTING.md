@@ -12,8 +12,8 @@ Thanks for your interest in contributing to `bpx`.
 ## Development Setup
 
 ```bash
-git clone https://github.com/wilddogjp/bpx.git
-cd bpx
+git clone https://github.com/wilddogjp/openbpx.git
+cd openbpx
 go mod download
 ```
 

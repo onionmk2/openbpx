@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/wilddogjp/bpx/internal/cli"
+	"github.com/wilddogjp/openbpx/internal/cli"
 )
 
 func main() {

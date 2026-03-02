@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/wilddogjp/bpx/pkg/uasset"
+	"github.com/wilddogjp/openbpx/pkg/uasset"
 )
 
 func TestDataTableRowFilterFlagSetAndNormalized(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/wilddogjp/bpx/pkg/uasset"
+	"github.com/wilddogjp/openbpx/pkg/uasset"
 )
 
 func TestRewriteRawRangeUpdatesOffsets(t *testing.T) {

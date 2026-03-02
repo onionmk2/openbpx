@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/wilddogjp/bpx/pkg/uasset"
+	"github.com/wilddogjp/openbpx/pkg/uasset"
 )
 
 //go:generate go run gen_synthetic.go

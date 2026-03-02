@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/wilddogjp/bpx/pkg/uasset"
+	"github.com/wilddogjp/openbpx/pkg/uasset"
 )
 
 // Check is one validation check result.

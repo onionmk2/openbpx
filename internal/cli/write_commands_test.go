@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/wilddogjp/bpx/pkg/uasset"
+	"github.com/wilddogjp/openbpx/pkg/uasset"
 )
 
 const packageFileTag = uint32(0x9E2A83C1)

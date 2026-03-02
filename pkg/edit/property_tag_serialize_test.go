@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"testing"
 
-	"github.com/wilddogjp/bpx/pkg/uasset"
+	"github.com/wilddogjp/openbpx/pkg/uasset"
 )
 
 func TestSerializePropertyTagLegacyObjectProperty(t *testing.T) {

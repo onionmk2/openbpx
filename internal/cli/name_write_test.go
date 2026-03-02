@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/wilddogjp/bpx/pkg/edit"
-	"github.com/wilddogjp/bpx/pkg/uasset"
+	"github.com/wilddogjp/openbpx/pkg/edit"
+	"github.com/wilddogjp/openbpx/pkg/uasset"
 )
 
 func TestRunNameAddWritesEntryAndHashes(t *testing.T) {

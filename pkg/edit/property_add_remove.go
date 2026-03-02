@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/wilddogjp/bpx/pkg/uasset"
+	"github.com/wilddogjp/openbpx/pkg/uasset"
 )
 
 // PropertyAddResult is the computed mutation for one prop add operation.

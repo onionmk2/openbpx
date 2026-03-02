@@ -11,8 +11,8 @@ import (
 	"strings"
 	"unicode/utf16"
 
-	"github.com/wilddogjp/bpx/pkg/edit"
-	"github.com/wilddogjp/bpx/pkg/uasset"
+	"github.com/wilddogjp/openbpx/pkg/edit"
+	"github.com/wilddogjp/openbpx/pkg/uasset"
 )
 
 func runMetadataSetRoot(args []string, stdout, stderr io.Writer) int {

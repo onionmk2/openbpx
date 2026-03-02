@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/wilddogjp/bpx/internal/cli"
+	"github.com/wilddogjp/openbpx/internal/cli"
 )
 
 type expectedCase struct {

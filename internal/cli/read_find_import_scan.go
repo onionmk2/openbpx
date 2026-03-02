@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/wilddogjp/bpx/pkg/uasset"
+	"github.com/wilddogjp/openbpx/pkg/uasset"
 )
 
 func runFind(args []string, stdout, stderr io.Writer) int {

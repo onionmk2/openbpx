@@ -6,7 +6,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/wilddogjp/bpx/pkg/uasset"
+	"github.com/wilddogjp/openbpx/pkg/uasset"
 )
 
 func TestBuildPropertySetMutationLevelViewportInfoArrayLeaf(t *testing.T) {

@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/wilddogjp/bpx/pkg/edit"
-	"github.com/wilddogjp/bpx/pkg/uasset"
+	"github.com/wilddogjp/openbpx/pkg/edit"
+	"github.com/wilddogjp/openbpx/pkg/uasset"
 )
 
 func applyPropertyMutation(asset *uasset.Asset, exportIndex int, path string, valueJSON string) ([]byte, *edit.PropertySetResult, error) {

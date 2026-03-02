@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/wilddogjp/bpx/pkg/uasset"
+	"github.com/wilddogjp/openbpx/pkg/uasset"
 )
 
 func runPackageCustomVersions(args []string, stdout, stderr io.Writer) int {

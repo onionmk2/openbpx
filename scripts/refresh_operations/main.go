@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/wilddogjp/bpx/internal/cli"
+	"github.com/wilddogjp/openbpx/internal/cli"
 )
 
 type operationDef struct {

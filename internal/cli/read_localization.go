@@ -13,7 +13,7 @@ import (
 	"unicode"
 	"unicode/utf16"
 
-	"github.com/wilddogjp/bpx/pkg/uasset"
+	"github.com/wilddogjp/openbpx/pkg/uasset"
 )
 
 const (

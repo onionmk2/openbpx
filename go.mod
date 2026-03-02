@@ -1,4 +1,4 @@
-module github.com/wilddogjp/bpx
+module github.com/wilddogjp/openbpx
 
 go 1.21.0
 

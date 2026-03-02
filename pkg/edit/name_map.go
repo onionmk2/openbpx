@@ -7,7 +7,7 @@ import (
 	"unicode"
 	"unicode/utf16"
 
-	"github.com/wilddogjp/bpx/pkg/uasset"
+	"github.com/wilddogjp/openbpx/pkg/uasset"
 )
 
 // RewriteNameMap replaces the serialized NameMap with the provided entries and

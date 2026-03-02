@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/wilddogjp/bpx/pkg/uasset"
+	"github.com/wilddogjp/openbpx/pkg/uasset"
 )
 
 const (

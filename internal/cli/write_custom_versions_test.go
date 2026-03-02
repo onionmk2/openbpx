@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/wilddogjp/bpx/pkg/uasset"
+	"github.com/wilddogjp/openbpx/pkg/uasset"
 )
 
 func TestSkipSummaryCustomVersionsForRewriteEnums(t *testing.T) {

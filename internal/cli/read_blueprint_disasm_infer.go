@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/wilddogjp/bpx/pkg/uasset"
+	"github.com/wilddogjp/openbpx/pkg/uasset"
 )
 
 type disasmInferenceResult struct {

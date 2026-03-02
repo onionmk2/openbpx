@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/wilddogjp/bpx/pkg/edit"
-	"github.com/wilddogjp/bpx/pkg/uasset"
+	"github.com/wilddogjp/openbpx/pkg/edit"
+	"github.com/wilddogjp/openbpx/pkg/uasset"
 )
 
 // buildPropertySetStructLeafFallbackMutation applies a best-effort fallback for

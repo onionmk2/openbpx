@@ -10,15 +10,15 @@ import (
 	"strings"
 
 	"github.com/pelletier/go-toml/v2"
-	"github.com/wilddogjp/bpx/pkg/uasset"
-	"github.com/wilddogjp/bpx/pkg/validate"
+	"github.com/wilddogjp/openbpx/pkg/uasset"
+	"github.com/wilddogjp/openbpx/pkg/validate"
 	"gopkg.in/yaml.v3"
 )
 
 const (
 	structuredOutputFormatJSON = "json"
 	structuredOutputFormatTOML = "toml"
-	defaultToolVersion         = "0.1.0"
+	defaultToolVersion         = "0.1.1"
 )
 
 var currentStructuredOutputFormat = structuredOutputFormatJSON

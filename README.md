@@ -1,7 +1,7 @@
 # BPX: Blueprint Toolkit for Unreal Engine (`bpx`)
 
-[![Test](https://github.com/wilddogjp/bpx/actions/workflows/test.yml/badge.svg)](https://github.com/wilddogjp/bpx/actions/workflows/test.yml)
-[![Release](https://img.shields.io/github/v/release/wilddogjp/bpx)](https://github.com/wilddogjp/bpx/releases)
+[![Test](https://github.com/wilddogjp/openbpx/actions/workflows/test.yml/badge.svg)](https://github.com/wilddogjp/openbpx/actions/workflows/test.yml)
+[![Release](https://img.shields.io/github/v/release/wilddogjp/openbpx)](https://github.com/wilddogjp/openbpx/releases)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/go-1.21+-00ADD8.svg)](https://go.dev/)
 
@@ -14,7 +14,7 @@ BPX runs on **Windows**, **macOS**, and **Linux**.
 ## Project Status
 
 - Phase: **Alpha**
-- Current CLI version: **0.1.0**
+- Current CLI version: **0.1.1**
 - Supported UE window: **UE 5.0 to UE 5.6** (`FileVersionUE5=1000..1017`)
 - Supported platforms: **Windows / macOS / Linux** (`amd64`, `arm64`)
 - Core principles: **unknown-byte preservation**, **round-trip fidelity**, **safety-first editing**, **UE behavior-grounded implementation**
@@ -24,18 +24,18 @@ BPX runs on **Windows**, **macOS**, and **Linux**.
 ### From source with `go install`
 
 ```bash
-go install github.com/wilddogjp/bpx/cmd/bpx@latest
+go install github.com/wilddogjp/openbpx/cmd/bpx@latest
 ```
 
 ### Build locally
 
 ```bash
-git clone https://github.com/wilddogjp/bpx.git
-cd bpx
+git clone https://github.com/wilddogjp/openbpx.git
+cd openbpx
 go build ./cmd/bpx
 ```
 
-Official release artifacts are published on [GitHub Releases](https://github.com/wilddogjp/bpx/releases).
+Official release artifacts are published on [GitHub Releases](https://github.com/wilddogjp/openbpx/releases).
 
 ## Quick Start
 
