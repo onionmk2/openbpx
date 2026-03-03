@@ -85,6 +85,7 @@ INCLUDE_PATHS=(
   ".github/workflows/fuzz-weekly.yml"
   ".github/workflows/release.yml"
   ".github/workflows/test.yml"
+  ".github/ISSUE_TEMPLATE"
   ".gitignore"
   ".goreleaser.yaml"
   "ISSUE.md"
