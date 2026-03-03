@@ -1,0 +1,37 @@
+name: Documentation request
+description: Request clarification or improvements in docs.
+title: "[Docs]: "
+labels:
+  - documentation
+body:
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and docs and did not find this already covered.
+          required: true
+  - type: input
+    id: target_path
+    attributes:
+      label: Target document path
+      description: For example `docs/commands.md` or `README.md`.
+      placeholder: docs/commands.md
+    validations:
+      required: true
+  - type: textarea
+    id: missing_or_unclear
+    attributes:
+      label: Missing or unclear part
+      description: What is unclear, incorrect, or missing?
+    validations:
+      required: true
+  - type: textarea
+    id: suggested_text
+    attributes:
+      label: Suggested wording or structure
+      description: Optional concrete text proposal.
+      placeholder: |
+        Add a section:
+        - ...
+        - ...

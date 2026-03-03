@@ -1,0 +1,52 @@
+name: Feature request
+description: Propose a new capability or behavior improvement.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and did not find a duplicate.
+          required: true
+        - label: I checked README.md and docs/commands.md.
+          required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What problem are you trying to solve?
+      placeholder: Describe the workflow pain point.
+    validations:
+      required: true
+  - type: textarea
+    id: proposed_behavior
+    attributes:
+      label: Proposed behavior
+      description: Describe the command/UI/contract you want.
+      placeholder: |
+        Add `bpx ...` with ...
+    validations:
+      required: true
+  - type: textarea
+    id: insufficient_current
+    attributes:
+      label: Why existing commands are insufficient
+      description: Explain what you tried and why it does not work.
+    validations:
+      required: true
+  - type: textarea
+    id: compatibility_safety
+    attributes:
+      label: Compatibility and safety impact
+      description: |
+        BPX prioritizes binary safety:
+        - Preserve unknown bytes
+        - Keep no-op round-trip byte-identical
+        - Explicitly fail unsupported high-risk rewrites
+        Explain expected impact for these guarantees.
+      placeholder: No compatibility break / no safety impact, because ...
+    validations:
+      required: true
