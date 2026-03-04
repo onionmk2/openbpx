@@ -6,6 +6,15 @@ The format is based on Keep a Changelog and the project follows Semantic Version
 
 ## [Unreleased]
 
+## [0.1.7]
+
+### Changed
+
+- BPX CLI default version string updated to `0.1.7`.
+- CLI version output tests now expect `0.1.7`.
+- Claude plugin manifest version updated to `0.1.7`.
+- Bug report issue template default version placeholder updated to `0.1.7`.
+
 ## [0.1.6]
 
 ### Changed

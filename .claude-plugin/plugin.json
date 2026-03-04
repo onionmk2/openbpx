@@ -1,5 +1,5 @@
 {
   "name": "openbpx",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "BPX plugin for Unreal Engine asset inspection and safe edit workflows."
 }
