@@ -1,0 +1,18 @@
+{
+	"command": "var rename",
+	"args":
+	{
+		"from": "体力",
+		"to": "HP"
+	},
+	"ue_procedure": "Rename unicode variable",
+	"expect": "byte_equal",
+	"notes": "var rename supports unicode-aware target names.",
+	"ignore_offsets": [
+		{
+			"offset": 24,
+			"length": 20,
+			"reason": "ue-save-nondeterministic"
+		}
+	]
+}

@@ -30,13 +30,13 @@ func main() {
 	}
 
 	patterns := []string{
-		"testdata/golden/parse/*.uasset",
-		"testdata/golden/parse/*.umap",
-		"testdata/golden/parse/*.locres",
-		"testdata/golden/operations/*/before.uasset",
-		"testdata/golden/operations/*/after.uasset",
-		"testdata/golden/operations/*/operation.json",
-		"testdata/golden/expected_output/*.json",
+		"testdata/golden/*/parse/*.uasset",
+		"testdata/golden/*/parse/*.umap",
+		"testdata/golden/*/parse/*.locres",
+		"testdata/golden/*/operations/*/before.uasset",
+		"testdata/golden/*/operations/*/after.uasset",
+		"testdata/golden/*/operations/*/operation.json",
+		"testdata/golden/*/expected_output/*.json",
 		"testdata/synthetic/*.uasset",
 		"testdata/synthetic/*.bin",
 	}

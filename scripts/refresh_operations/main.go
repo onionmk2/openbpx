@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,12 +14,13 @@ import (
 )
 
 type operationDef struct {
-	Name      string
-	Command   string
-	Args      map[string]any
-	Expect    string
-	Notes     string
-	Procedure string
+	Name          string
+	Command       string
+	Args          map[string]any
+	Expect        string
+	ErrorContains string
+	Notes         string
+	Procedure     string
 }
 
 type operationSpecFile struct {
@@ -26,6 +28,7 @@ type operationSpecFile struct {
 	Args          map[string]any   `json:"args"`
 	UEProcedure   string           `json:"ue_procedure"`
 	Expect        string           `json:"expect"`
+	ErrorContains string           `json:"error_contains,omitempty"`
 	Notes         string           `json:"notes"`
 	IgnoreOffsets []map[string]any `json:"ignore_offsets,omitempty"`
 }
@@ -33,11 +36,21 @@ type operationSpecFile struct {
 const packageFileTag = uint32(0x9E2A83C1)
 
 func main() {
+	goldenRootFlag := flag.String("golden-root", filepath.Join("testdata", "golden"), "golden fixture root containing operations/")
+	flag.Parse()
+	if flag.NArg() != 0 {
+		die("args", fmt.Errorf("unexpected positional arguments: %v", flag.Args()))
+	}
+
 	repoRoot, err := os.Getwd()
 	if err != nil {
 		die("getwd", err)
 	}
-	operationsDir := filepath.Join(repoRoot, "testdata", "golden", "operations")
+	goldenRoot := *goldenRootFlag
+	if !filepath.IsAbs(goldenRoot) {
+		goldenRoot = filepath.Join(repoRoot, goldenRoot)
+	}
+	operationsDir := filepath.Join(filepath.Clean(goldenRoot), "operations")
 	if err := os.MkdirAll(operationsDir, 0o755); err != nil {
 		die("mkdir operations dir", err)
 	}
@@ -93,11 +106,12 @@ func main() {
 		}
 
 		spec := operationSpecFile{
-			Command:     def.Command,
-			Args:        def.Args,
-			UEProcedure: def.Procedure,
-			Expect:      def.Expect,
-			Notes:       def.Notes,
+			Command:       def.Command,
+			Args:          def.Args,
+			UEProcedure:   def.Procedure,
+			Expect:        def.Expect,
+			ErrorContains: def.ErrorContains,
+			Notes:         def.Notes,
 		}
 		body, err := json.MarshalIndent(spec, "", "  ")
 		if err != nil {
@@ -120,11 +134,11 @@ func buildOperationDefs() []operationDef {
 
 		// Prop set fixtures (current repository fixtures are not yet all writable by bpx; keep explicit unsupported expectations except validated smoke pair).
 		{Name: "prop_set_array_element", Command: "prop set", Args: map[string]any{"export": 1, "path": "FixtureValue", "value": "1"}, Expect: "unsupported", Notes: "fixture migration pending for array element path", Procedure: "prepare writable array fixture and compare against UE output"},
-		{Name: "prop_set_bool", Command: "prop set", Args: map[string]any{"export": 1, "path": "FixtureValue", "value": "true"}, Expect: "unsupported", Notes: "fixture migration pending for bool path", Procedure: "prepare writable bool fixture and compare against UE output"},
-		{Name: "prop_set_color", Command: "prop set", Args: map[string]any{"export": 1, "path": "FixtureColor", "value": `{"R":1,"G":0,"B":0,"A":1}`}, Expect: "unsupported", Notes: "fixture migration pending for struct path", Procedure: "prepare writable color fixture and compare against UE output"},
+		{Name: "prop_set_bool", Command: "prop set", Args: map[string]any{"export": 3, "path": "VBool", "value": "false"}, Expect: "byte_equal", Notes: "validated on ue5.6/ue5.7 scalar fixture roots", Procedure: "toggle BoolProperty default on scalar fixture"},
+		{Name: "prop_set_color", Command: "prop set", Args: map[string]any{"export": 3, "path": "VColor", "value": `{"structType":"LinearColor","value":{"r":0.25,"g":0.5,"b":0.75,"a":1}}`}, Expect: "byte_equal", Notes: "validated on ue5.6/ue5.7 math fixture roots", Procedure: "update LinearColor value on math fixture"},
 		{Name: "prop_set_double", Command: "prop set", Args: map[string]any{"export": 1, "path": "FixtureValue", "value": "2.718281828"}, Expect: "unsupported", Notes: "fixture migration pending for double path", Procedure: "prepare writable double fixture and compare against UE output"},
 		{Name: "prop_set_enum", Command: "prop set", Args: map[string]any{"export": 1, "path": "FixtureEnum", "value": `"ValueA"`}, Expect: "unsupported", Notes: "fixture migration pending for enum path", Procedure: "prepare writable enum fixture and compare against UE output"},
-		{Name: "prop_set_enum_numeric", Command: "prop set", Args: map[string]any{"export": 1, "path": "FixtureEnum", "value": "1"}, Expect: "unsupported", Notes: "fixture migration pending for enum numeric path", Procedure: "prepare writable enum fixture and compare against UE output"},
+		{Name: "prop_set_enum_numeric", Command: "prop set", Args: map[string]any{"export": 1, "path": "FixtureEnum", "value": "1"}, Expect: "byte_equal", Notes: "enum numeric literal coercion to underlying enum value is implemented", Procedure: "set enum via numeric literal and compare against UE output"},
 		{Name: "prop_set_enum_anchor", Command: "prop set", Args: map[string]any{"export": 1, "path": "FixtureEnumAnchor", "value": `"ValueA"`}, Expect: "unsupported", Notes: "fixture migration pending for enum anchor path", Procedure: "prepare writable enum fixture and compare against UE output"},
 		{Name: "prop_set_float", Command: "prop set", Args: map[string]any{"export": 1, "path": "FixtureValue", "value": "3.14"}, Expect: "unsupported", Notes: "fixture migration pending for float path", Procedure: "prepare writable float fixture and compare against UE output"},
 		{Name: "prop_set_float_special", Command: "prop set", Args: map[string]any{"export": 1, "path": "FixtureValue", "value": "1e-38"}, Expect: "unsupported", Notes: "fixture migration pending for float special path", Procedure: "prepare writable float fixture and compare against UE output"},
@@ -134,52 +148,52 @@ func buildOperationDefs() []operationDef {
 		{Name: "prop_set_int_min", Command: "prop set", Args: map[string]any{"export": 1, "path": "FixtureValue", "value": "-2147483648"}, Expect: "unsupported", Notes: "fixture migration pending for int min path", Procedure: "prepare writable int fixture and compare against UE output"},
 		{Name: "prop_set_int_negative", Command: "prop set", Args: map[string]any{"export": 1, "path": "FixtureValue", "value": "-1"}, Expect: "unsupported", Notes: "fixture migration pending for negative int path", Procedure: "prepare writable int fixture and compare against UE output"},
 		{Name: "prop_set_map_value", Command: "prop set", Args: map[string]any{"export": 1, "path": `MyMap["key"]`, "value": "99"}, Expect: "unsupported", Notes: "fixture migration pending for map path", Procedure: "prepare writable map fixture and compare against UE output"},
-		{Name: "prop_set_custom_struct_int", Command: "prop set", Args: map[string]any{"export": 1, "path": "FixtureCustom.IntVal", "value": "42"}, Expect: "unsupported", Notes: "custom struct tagged re-encoding is not implemented yet", Procedure: "update custom struct int field"},
-		{Name: "prop_set_custom_struct_enum", Command: "prop set", Args: map[string]any{"export": 1, "path": "FixtureCustom.EnumVal", "value": `"BPXEnum_ValueB"`}, Expect: "unsupported", Notes: "custom struct tagged re-encoding is not implemented yet", Procedure: "update custom struct enum field"},
+		{Name: "prop_set_custom_struct_int", Command: "prop set", Args: map[string]any{"export": 1, "path": "FixtureCustom.IntVal", "value": "42"}, Expect: "byte_equal", Notes: "custom struct int tagged re-encoding is implemented", Procedure: "update custom struct int field"},
+		{Name: "prop_set_custom_struct_enum", Command: "prop set", Args: map[string]any{"export": 5, "path": "FixtureCustom.EnumVal", "value": "1"}, Expect: "byte_equal", Notes: "covers custom struct enum re-encoding without requiring NameMap growth", Procedure: "set custom struct enum field via numeric literal"},
 		{Name: "prop_set_name", Command: "prop set", Args: map[string]any{"export": 1, "path": "FixtureName", "value": `"NewName"`}, Expect: "unsupported", Notes: "fixture migration pending for name path", Procedure: "prepare writable name fixture and compare against UE output"},
-		{Name: "prop_set_nested_array_struct", Command: "prop set", Args: map[string]any{"export": 1, "path": "InnerArray[0].StrVal", "value": `"new"`}, Expect: "unsupported", Notes: "fixture migration pending for nested array path", Procedure: "prepare writable nested fixture and compare against UE output"},
-		{Name: "prop_set_nested_struct", Command: "prop set", Args: map[string]any{"export": 1, "path": "Inner.IntVal", "value": "42"}, Expect: "unsupported", Notes: "fixture migration pending for nested struct path", Procedure: "prepare writable nested fixture and compare against UE output"},
+		{Name: "prop_set_nested_array_struct", Command: "prop set", Args: map[string]any{"export": 1, "path": "LastEditedDocuments[0].SavedZoomAmount", "value": "-2.5"}, Expect: "error_equal", ErrorContains: "EditedDocumentInfo is not editable", Notes: "fixture now asserts explicit rejection with byte-identical output", Procedure: "attempt nested array-of-struct leaf update on blueprint metadata export"},
+		{Name: "prop_set_nested_struct", Command: "prop set", Args: map[string]any{"export": 3, "path": "VTransform.Translation", "value": `{"x":1,"y":2,"z":3}`}, Expect: "byte_equal", Notes: "validated on ue5.6/ue5.7 math fixture roots", Procedure: "update nested Transform.Translation struct"},
 		{Name: "prop_set_rotator", Command: "prop set", Args: map[string]any{"export": 1, "path": "FixtureRotator", "value": `{"Pitch":45,"Yaw":90,"Roll":180}`}, Expect: "unsupported", Notes: "fixture migration pending for rotator path", Procedure: "prepare writable rotator fixture and compare against UE output"},
-		{Name: "prop_set_soft_object", Command: "prop set", Args: map[string]any{"export": 1, "path": "FixtureSoft", "value": `{"packageName":"/Game/New","assetName":"Asset"}`}, Expect: "unsupported", Notes: "fixture migration pending for soft object path", Procedure: "prepare writable soft object fixture and compare against UE output"},
+		{Name: "prop_set_soft_object", Command: "prop set", Args: map[string]any{"export": 1, "path": "LastEditedDocuments[0].EditedObjectPath", "value": `{"packageName":"/Game/BPXFixtures/Parse/BP_WithMetadata","assetName":"BP_WithMetadata_C"}`}, Expect: "error_equal", ErrorContains: "EditedDocumentInfo is not editable", Notes: "fixture now asserts explicit rejection with byte-identical output", Procedure: "attempt soft object path update inside EditedDocumentInfo array"},
 		{Name: "prop_set_string_diff_len", Command: "prop set", Args: map[string]any{"export": 1, "path": "FixtureValue", "value": `"Hello World"`}, Expect: "unsupported", Notes: "fixture migration pending for string diff-len path", Procedure: "prepare writable string fixture and compare against UE output"},
 		{Name: "prop_set_string_empty", Command: "prop set", Args: map[string]any{"export": 1, "path": "FixtureValue", "value": `""`}, Expect: "unsupported", Notes: "fixture migration pending for empty-string path", Procedure: "prepare writable string fixture and compare against UE output"},
 		{Name: "prop_set_string_same_len", Command: "prop set", Args: map[string]any{"export": 1, "path": "FixtureValue", "value": `"World"`}, Expect: "unsupported", Notes: "fixture migration pending for same-length string path", Procedure: "prepare writable string fixture and compare against UE output"},
 		{Name: "prop_set_string_unicode", Command: "prop set", Args: map[string]any{"export": 1, "path": "FixtureValue", "value": `"テスト"`}, Expect: "unsupported", Notes: "fixture migration pending for unicode string path", Procedure: "prepare writable unicode string fixture and compare against UE output"},
-		{Name: "prop_set_text", Command: "prop set", Args: map[string]any{"export": 1, "path": "FixtureText", "value": `"Changed"`}, Expect: "unsupported", Notes: "fixture migration pending for text path", Procedure: "prepare writable text fixture and compare against UE output"},
-		{Name: "prop_set_transform", Command: "prop set", Args: map[string]any{"export": 1, "path": "FixtureTransform", "value": `{"Translation":{"X":1,"Y":2,"Z":3}}`}, Expect: "unsupported", Notes: "fixture migration pending for transform path", Procedure: "prepare writable transform fixture and compare against UE output"},
+		{Name: "prop_set_text", Command: "prop set", Args: map[string]any{"export": 11, "path": "CategoryName", "value": `"Gameplay"`}, Expect: "byte_equal", Notes: "validated on ue5.6/ue5.7 scalar fixture roots", Procedure: "update TextProperty CategoryName on SCS node"},
+		{Name: "prop_set_transform", Command: "prop set", Args: map[string]any{"export": 3, "path": "VTransform", "value": `{"structType":"Transform","value":{"Translation":{"type":"StructProperty(Vector(/Script/CoreUObject))","value":{"structType":"Vector","value":{"x":1,"y":2,"z":3}}},"Rotation":{"type":"StructProperty(Quat(/Script/CoreUObject))","value":{"structType":"Quat","value":{"x":0,"y":0,"z":0,"w":1}}},"Scale3D":{"type":"StructProperty(Vector(/Script/CoreUObject))","value":{"structType":"Vector","value":{"x":1,"y":1,"z":1}}}}}`}, Expect: "byte_equal", Notes: "validated on ue5.6/ue5.7 math fixture roots", Procedure: "update Transform value on math fixture"},
 		{Name: "prop_set_vector", Command: "prop set", Args: map[string]any{"export": 1, "path": "FixtureVector", "value": `{"X":1.5,"Y":-2.3,"Z":100.0}`}, Expect: "unsupported", Notes: "fixture migration pending for vector path", Procedure: "prepare writable vector fixture and compare against UE output"},
 
-		{Name: "dt_update_int", Command: "datatable update-row", Args: map[string]any{"row": "Row_A", "values": `{"Score":999}`}, Expect: "unsupported", Notes: "datatable update-row is not implemented yet", Procedure: "update one integer column"},
-		{Name: "dt_update_float", Command: "datatable update-row", Args: map[string]any{"row": "Row_B", "values": `{"Rate":0.5}`}, Expect: "unsupported", Notes: "datatable update-row is not implemented yet", Procedure: "update one float column"},
-		{Name: "dt_update_string", Command: "datatable update-row", Args: map[string]any{"row": "Row_A", "values": `{"Name":"NewName"}`}, Expect: "unsupported", Notes: "datatable update-row is not implemented yet", Procedure: "update one string column"},
-		{Name: "dt_update_multi_field", Command: "datatable update-row", Args: map[string]any{"row": "Row_A", "values": `{"Score":50,"Rate":0.1}`}, Expect: "unsupported", Notes: "datatable update-row is not implemented yet", Procedure: "update multiple columns"},
-		{Name: "dt_update_complex", Command: "datatable update-row", Args: map[string]any{"row": "Row_A", "values": `{"Tags":["TagA","TagB"]}`}, Expect: "unsupported", Notes: "datatable update-row is not implemented yet", Procedure: "update complex row value"},
+		{Name: "dt_update_int", Command: "datatable update-row", Args: map[string]any{"row": "Row_A", "values": `{"Score":999}`}, Expect: "byte_equal", Notes: "validated on ue5.6/ue5.7 DataTable fixtures", Procedure: "update one integer column"},
+		{Name: "dt_update_float", Command: "datatable update-row", Args: map[string]any{"row": "Row_B", "values": `{"Rate":1.25}`}, Expect: "byte_equal", Notes: "validated on ue5.6/ue5.7 DataTable fixtures", Procedure: "update one float column"},
+		{Name: "dt_update_string", Command: "datatable update-row", Args: map[string]any{"row": "Row_A", "values": `{"Label":"NewName"}`}, Expect: "byte_equal", Notes: "validated on ue5.6/ue5.7 DataTable fixtures", Procedure: "update one string column"},
+		{Name: "dt_update_multi_field", Command: "datatable update-row", Args: map[string]any{"row": "Row_A", "values": `{"Score":50,"Rate":0.1}`}, Expect: "byte_equal", Notes: "validated on ue5.6/ue5.7 DataTable fixtures", Procedure: "update multiple columns"},
+		{Name: "dt_update_complex", Command: "datatable update-row", Args: map[string]any{"row": "Row_A", "values": `{"Tags":["TagA","TagB"]}`}, Expect: "error_equal", ErrorContains: "property not found: Tags", Notes: "fixture now asserts explicit rejection with byte-identical output", Procedure: "attempt complex DataTable row update against scalar row schema"},
 		{Name: "dt_add_row", Command: "datatable add-row", Args: map[string]any{"row": "Row_A_1"}, Expect: "byte_equal", Notes: "validated by operation-equivalence test", Procedure: "add one row with existing name base"},
 		{Name: "dt_add_row_values_scalar", Command: "datatable add-row", Args: map[string]any{"row": "Row_A_1", "values": `{"Score":123}`}, Expect: "byte_equal", Notes: "validated by operation-equivalence test", Procedure: "add one row with scalar value update"},
 		{Name: "dt_add_row_values_mixed", Command: "datatable add-row", Args: map[string]any{"row": "Row_B_1", "values": `{"Score":7,"Rate":0.25,"Label":"Row_B_added","Mode":"BPXEnum_ValueB"}`}, Expect: "byte_equal", Notes: "validated by operation-equivalence test", Procedure: "add one row with mixed-type value updates"},
 		{Name: "dt_remove_row", Command: "datatable remove-row", Args: map[string]any{"row": "Row_A_1"}, Expect: "byte_equal", Notes: "validated by operation-equivalence test", Procedure: "remove one row"},
 		{Name: "dt_remove_row_base", Command: "datatable remove-row", Args: map[string]any{"row": "Row_B"}, Expect: "byte_equal", Notes: "validated by operation-equivalence test", Procedure: "remove one base row"},
-		{Name: "dt_add_row_composite_reject", Command: "datatable add-row", Args: map[string]any{"row": "Row_A_1"}, Expect: "unsupported", Notes: "composite datatable write is rejected", Procedure: "reject add-row against CompositeDataTable"},
-		{Name: "dt_remove_row_composite_reject", Command: "datatable remove-row", Args: map[string]any{"row": "Row_A"}, Expect: "unsupported", Notes: "composite datatable write is rejected", Procedure: "reject remove-row against CompositeDataTable"},
-		{Name: "dt_update_row_composite_reject", Command: "datatable update-row", Args: map[string]any{"row": "Row_A", "values": `{"Score":999}`}, Expect: "unsupported", Notes: "composite datatable write is rejected", Procedure: "reject update-row against CompositeDataTable"},
+		{Name: "dt_add_row_composite_reject", Command: "datatable add-row", Args: map[string]any{"row": "Row_A_1"}, Expect: "error_equal", ErrorContains: "composite", Notes: "fixture now asserts explicit rejection with byte-identical output", Procedure: "reject add-row against CompositeDataTable"},
+		{Name: "dt_remove_row_composite_reject", Command: "datatable remove-row", Args: map[string]any{"row": "Row_A"}, Expect: "error_equal", ErrorContains: "composite", Notes: "fixture now asserts explicit rejection with byte-identical output", Procedure: "reject remove-row against CompositeDataTable"},
+		{Name: "dt_update_row_composite_reject", Command: "datatable update-row", Args: map[string]any{"row": "Row_A", "values": `{"Score":999}`}, Expect: "error_equal", ErrorContains: "composite", Notes: "fixture now asserts explicit rejection with byte-identical output", Procedure: "reject update-row against CompositeDataTable"},
 
-		{Name: "metadata_set_tooltip", Command: "metadata set-root", Args: map[string]any{"export": 1, "key": "ToolTip", "value": "Updated"}, Expect: "unsupported", Notes: "metadata set-root is not implemented yet", Procedure: "set root metadata tooltip"},
-		{Name: "metadata_set_category", Command: "metadata set-root", Args: map[string]any{"export": 1, "key": "Category", "value": "Gameplay"}, Expect: "unsupported", Notes: "metadata set-root is not implemented yet", Procedure: "set root metadata category"},
-		{Name: "export_set_header", Command: "export set-header", Args: map[string]any{"index": 1, "fields": `{"objectFlags":1}`}, Expect: "unsupported", Notes: "export set-header is not implemented yet", Procedure: "set export header fields"},
-		{Name: "package_set_flags", Command: "package set-flags", Args: map[string]any{"flags": "PKG_FilterEditorOnly"}, Expect: "unsupported", Notes: "package set-flags is not implemented yet", Procedure: "set package flags"},
+		{Name: "metadata_set_tooltip", Command: "metadata set-root", Args: map[string]any{"export": 1, "key": "ToolTip", "value": "Updated"}, Expect: "error_equal", ErrorContains: "no editable path matched", Notes: "fixture now asserts explicit rejection with byte-identical output", Procedure: "attempt root tooltip metadata update"},
+		{Name: "metadata_set_category", Command: "metadata set-root", Args: map[string]any{"export": 11, "key": "CategoryName", "value": "Gameplay"}, Expect: "byte_equal", Notes: "validated on ue5.6/ue5.7 scalar fixture roots", Procedure: "update root category text property via metadata set-root path fallback"},
+		{Name: "export_set_header", Command: "export set-header", Args: map[string]any{"index": 1, "fields": `{"objectFlags":1}`}, Expect: "byte_equal", Notes: "export set-header deterministically updates selected header fields", Procedure: "set export header fields"},
+		{Name: "package_set_flags", Command: "package set-flags", Args: map[string]any{"flags": "PKG_REQUIRESLOCALIZATIONGATHER|PKG_RUNTIMEGENERATED"}, Expect: "byte_equal", Notes: "validated on ue5.6/ue5.7 parse fixtures", Procedure: "set package flags without touching shape-sensitive bits"},
 
 		{Name: "var_set_default_int", Command: "var set-default", Args: map[string]any{"name": "MyStr", "value": `"changed"`}, Expect: "byte_equal", Notes: "validated by operation-equivalence test", Procedure: "update default variable value through var set-default"},
 		{Name: "var_set_default_empty", Command: "var set-default", Args: map[string]any{"name": "MyStr", "value": `""`}, Expect: "byte_equal", Notes: "validated by operation-equivalence test", Procedure: "update default variable value to empty string"},
 		{Name: "var_set_default_unicode", Command: "var set-default", Args: map[string]any{"name": "MyStr", "value": `"テスト"`}, Expect: "byte_equal", Notes: "validated by operation-equivalence test", Procedure: "update default variable value to unicode string"},
 		{Name: "var_set_default_long", Command: "var set-default", Args: map[string]any{"name": "MyStr", "value": `"Lorem ipsum dolor sit amet var-default"`}, Expect: "byte_equal", Notes: "validated by operation-equivalence test", Procedure: "update default variable value to long string"},
-		{Name: "var_set_default_string", Command: "var set-default", Args: map[string]any{"name": "FixtureValue", "value": `"NewTitle"`}, Expect: "unsupported", Notes: "fixture migration pending for string default path", Procedure: "update default string variable"},
-		{Name: "var_set_default_vector", Command: "var set-default", Args: map[string]any{"name": "FixtureValue", "value": `{"X":1,"Y":2,"Z":3}`}, Expect: "unsupported", Notes: "fixture migration pending for vector default path", Procedure: "update default vector variable"},
+		{Name: "var_set_default_string", Command: "var set-default", Args: map[string]any{"name": "VString", "value": `"golden"`}, Expect: "byte_equal", Notes: "validated on ue5.6/ue5.7 scalar fixture roots", Procedure: "update string variable default value"},
+		{Name: "var_set_default_vector", Command: "var set-default", Args: map[string]any{"name": "VVector", "value": `{"x":1,"y":2,"z":3}`}, Expect: "byte_equal", Notes: "validated on ue5.6/ue5.7 math fixture roots", Procedure: "update vector variable default value"},
 
-		{Name: "var_rename_simple", Command: "var rename", Args: map[string]any{"from": "OldVar", "to": "NewVar"}, Expect: "unsupported", Notes: "var rename is not implemented yet", Procedure: "rename simple variable"},
-		{Name: "var_rename_with_refs", Command: "var rename", Args: map[string]any{"from": "UsedVar", "to": "RenamedVar"}, Expect: "unsupported", Notes: "var rename is not implemented yet", Procedure: "rename variable with graph references"},
-		{Name: "var_rename_unicode", Command: "var rename", Args: map[string]any{"from": "体力", "to": "HP"}, Expect: "unsupported", Notes: "var rename is not implemented yet", Procedure: "rename unicode variable"},
-		{Name: "ref_rewrite_single", Command: "ref rewrite", Args: map[string]any{"from": "/Game/Old/Mesh", "to": "/Game/New/Mesh"}, Expect: "unsupported", Notes: "ref rewrite is not implemented yet", Procedure: "rewrite one soft reference"},
-		{Name: "ref_rewrite_multi", Command: "ref rewrite", Args: map[string]any{"from": "/Game/OldDir", "to": "/Game/NewDir"}, Expect: "unsupported", Notes: "ref rewrite is not implemented yet", Procedure: "rewrite references by directory"},
+		{Name: "var_rename_simple", Command: "var rename", Args: map[string]any{"from": "OldVar", "to": "NewVar"}, Expect: "byte_equal", Notes: "var rename supports deterministic declaration/name-map rewrites", Procedure: "rename simple variable"},
+		{Name: "var_rename_with_refs", Command: "var rename", Args: map[string]any{"from": "UsedVar", "to": "RenamedVar"}, Expect: "byte_equal", Notes: "var rename applies declaration/name-map rewrites with reference updates", Procedure: "rename variable with graph references"},
+		{Name: "var_rename_unicode", Command: "var rename", Args: map[string]any{"from": "体力", "to": "HP"}, Expect: "byte_equal", Notes: "var rename supports unicode-aware target names", Procedure: "rename unicode variable"},
+		{Name: "ref_rewrite_single", Command: "ref rewrite", Args: map[string]any{"from": "/Game/Old/Mesh", "to": "/Game/New/Mesh"}, Expect: "byte_equal", Notes: "ref rewrite supports single-path replacements", Procedure: "rewrite one soft reference"},
+		{Name: "ref_rewrite_multi", Command: "ref rewrite", Args: map[string]any{"from": "/Game/OldDir", "to": "/Game/NewDir"}, Expect: "byte_equal", Notes: "ref rewrite supports directory-wide replacements", Procedure: "rewrite references by directory"},
 	}
 	return defs
 }

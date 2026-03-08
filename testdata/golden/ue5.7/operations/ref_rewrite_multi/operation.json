@@ -1,0 +1,18 @@
+{
+	"command": "ref rewrite",
+	"args":
+	{
+		"from": "/Game/OldDir",
+		"to": "/Game/NewDir"
+	},
+	"ue_procedure": "Rewrite references under directory",
+	"expect": "byte_equal",
+	"notes": "ref rewrite supports directory-wide replacements.",
+	"ignore_offsets": [
+		{
+			"offset": 24,
+			"length": 20,
+			"reason": "ue-save-nondeterministic"
+		}
+	]
+}

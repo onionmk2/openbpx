@@ -1,0 +1,13 @@
+{
+	"command": "localization set-stringtable-ref",
+	"args":
+	{
+		"export": "11",
+		"path": "CategoryName",
+		"table": "SimpleConstructionScript",
+		"key": "BTN_CANCEL"
+	},
+	"ue_procedure": "Convert existing TextProperty to StringTable reference with alternate key",
+	"expect": "byte_equal",
+	"notes": "TextProperty conversion to StringTableEntry using BTN_CANCEL."
+}

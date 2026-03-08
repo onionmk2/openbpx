@@ -1,0 +1,12 @@
+{
+	"command": "metadata set-root",
+	"args":
+	{
+		"export": 11,
+		"key": "CategoryName",
+		"value": "Gameplay"
+	},
+	"ue_procedure": "Update root category text property via metadata set-root path fallback",
+	"expect": "byte_equal",
+	"notes": "Validated on ue5.6/ue5.7 scalar fixture roots."
+}

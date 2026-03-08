@@ -80,6 +80,9 @@ func checkOffsets(asset *uasset.Asset) Check {
 	if s.ExportOffset < 0 || int(s.ExportOffset) > sz {
 		return Check{Name: "table-offsets", Passed: false, Details: fmt.Sprintf("exportOffset out of range: %d", s.ExportOffset)}
 	}
+	if s.ImportTypeHierarchiesOffset < 0 || int(s.ImportTypeHierarchiesOffset) > sz {
+		return Check{Name: "table-offsets", Passed: false, Details: fmt.Sprintf("importTypeHierarchiesOffset out of range: %d", s.ImportTypeHierarchiesOffset)}
+	}
 	return Check{Name: "table-offsets", Passed: true, Details: "core table offsets are within file"}
 }
 
@@ -116,7 +119,8 @@ func checkNameReferences(asset *uasset.Asset) Check {
 
 func checkUEVersion(asset *uasset.Asset) Check {
 	s := asset.Summary
-	if s.FileVersionUE5 < 1000 || s.FileVersionUE5 > 1017 {
+	min, max := uasset.SupportedUE5VersionWindow()
+	if s.FileVersionUE5 < min || s.FileVersionUE5 > max {
 		return Check{Name: "ue-version-window", Passed: false, Details: fmt.Sprintf("unexpected FileVersionUE5=%d", s.FileVersionUE5)}
 	}
 	return Check{Name: "ue-version-window", Passed: true, Details: fmt.Sprintf("FileVersionUE5=%d", s.FileVersionUE5)}

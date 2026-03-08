@@ -1,0 +1,10 @@
+{
+  "command": "name set",
+  "args": {
+    "index": "1",
+    "value": "名前変更"
+  },
+  "ue_procedure": "Update one NameMap entry to unicode text",
+  "expect": "byte_equal",
+  "notes": "Low-level unicode NameMap set fixture."
+}

@@ -38,28 +38,64 @@ func ParseBytes(data []byte, opts ParseOptions) (*Asset, error) {
 		return nil, fmt.Errorf("file too small")
 	}
 
+	primary := parseBytesWithUnversionedFallback(data, opts, ue5MaximumKnown)
+	if primary.err == nil {
+		if !primary.summary.Unversioned || unversionedSummaryLooksAligned(primary.summary) || ue5UnversionedFallback == ue5MaximumKnown {
+			return primary.asset, nil
+		}
+
+		legacy := parseBytesWithUnversionedFallback(data, opts, ue5UnversionedFallback)
+		if legacy.err == nil && unversionedSummaryLooksAligned(legacy.summary) {
+			return legacy.asset, nil
+		}
+		return primary.asset, nil
+	}
+	if !primary.summary.Unversioned || ue5UnversionedFallback == ue5MaximumKnown {
+		return nil, primary.err
+	}
+
+	legacy := parseBytesWithUnversionedFallback(data, opts, ue5UnversionedFallback)
+	if legacy.err == nil {
+		return legacy.asset, nil
+	}
+
+	return nil, fmt.Errorf(
+		"%v; retry with unversioned fallback fileVersionUE5=%d failed: %w",
+		primary.err,
+		ue5UnversionedFallback,
+		legacy.err,
+	)
+}
+
+type parseAttempt struct {
+	asset   *Asset
+	summary PackageSummary
+	err     error
+}
+
+func parseBytesWithUnversionedFallback(data []byte, opts ParseOptions, unversionedFallback int32) parseAttempt {
 	r := newByteReader(data)
-	summary, err := parseSummary(r)
+	summary, err := parseSummaryWithUnversionedFallback(r, unversionedFallback)
 	if err != nil {
-		return nil, fmt.Errorf("parse summary: %w", err)
+		return parseAttempt{summary: summary, err: fmt.Errorf("parse summary: %w", err)}
 	}
 	summary.SummarySize = r.offset()
 
 	if err := validateSupportedVersionWindow(summary); err != nil {
-		return nil, err
+		return parseAttempt{summary: summary, err: err}
 	}
 
 	names, err := parseNameMap(data, summary)
 	if err != nil {
-		return nil, fmt.Errorf("parse name map: %w", err)
+		return parseAttempt{summary: summary, err: fmt.Errorf("parse name map: %w", err)}
 	}
 	imports, err := parseImportMap(data, summary, len(names))
 	if err != nil {
-		return nil, fmt.Errorf("parse import map: %w", err)
+		return parseAttempt{summary: summary, err: fmt.Errorf("parse import map: %w", err)}
 	}
 	exports, err := parseExportMap(data, summary, len(names))
 	if err != nil {
-		return nil, fmt.Errorf("parse export map: %w", err)
+		return parseAttempt{summary: summary, err: fmt.Errorf("parse export map: %w", err)}
 	}
 
 	rawBytes := data
@@ -74,7 +110,11 @@ func ParseBytes(data []byte, opts ParseOptions) (*Asset, error) {
 		Imports: imports,
 		Exports: exports,
 	}
-	return asset, nil
+	return parseAttempt{asset: asset, summary: summary, err: nil}
+}
+
+func unversionedSummaryLooksAligned(summary PackageSummary) bool {
+	return !summary.Unversioned || int32(summary.SummarySize) == summary.NameOffset
 }
 
 func validateSupportedVersionWindow(summary PackageSummary) error {
@@ -90,6 +130,10 @@ func validateSupportedVersionWindow(summary PackageSummary) error {
 }
 
 func parseSummary(r *byteReader) (PackageSummary, error) {
+	return parseSummaryWithUnversionedFallback(r, ue5UnversionedFallback)
+}
+
+func parseSummaryWithUnversionedFallback(r *byteReader, unversionedFallback int32) (PackageSummary, error) {
 	var s PackageSummary
 
 	tag, err := r.readInt32()
@@ -143,10 +187,11 @@ func parseSummary(r *byteReader) (PackageSummary, error) {
 	}
 	s.Unversioned = s.FileVersionUE4 == 0 && s.FileVersionUE5 == 0 && s.FileVersionLicenseeUE4 == 0
 	if s.Unversioned {
-		// Match UE loader behavior: unversioned package summaries are promoted to
-		// current supported versions before reading the rest of the summary.
+		// UE promotes unversioned summaries to current package-file versions.
+		// We inject a caller-selected fallback so ParseBytes can retry across
+		// known UE5 layouts when needed.
 		s.FileVersionUE4 = ue4VersionUE56
-		s.FileVersionUE5 = ue5MaximumKnown
+		s.FileVersionUE5 = unversionedFallback
 		s.FileVersionLicenseeUE4 = 0
 	}
 
@@ -279,6 +324,17 @@ func parseSummary(r *byteReader) (PackageSummary, error) {
 	}
 	if s.ThumbnailTableOffset, err = r.readInt32(); err != nil {
 		return s, err
+	}
+	if s.FileVersionUE5 >= ue5ImportTypeHierarchies {
+		if s.ImportTypeHierarchiesCount, err = r.readInt32(); err != nil {
+			return s, err
+		}
+		if err := validateCount("import type hierarchies count", s.ImportTypeHierarchiesCount); err != nil {
+			return s, err
+		}
+		if s.ImportTypeHierarchiesOffset, err = r.readInt32(); err != nil {
+			return s, err
+		}
 	}
 
 	if s.FileVersionUE5 < ue5PackageSavedHash {

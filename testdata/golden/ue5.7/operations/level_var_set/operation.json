@@ -1,0 +1,12 @@
+{
+  "command": "level var-set",
+  "args": {
+    "actor": "LyraWorldSettings",
+    "path": "NavigationSystemConfig",
+    "value": "0"
+  },
+  "ue_procedure": "Reject placed-actor NavigationSystemConfig rewrite because UE save also compacts dependent graph state",
+  "expect": "error_equal",
+  "error_contains": "not supported by level var-set",
+  "notes": "Level var-set currently rejects NavigationSystemConfig because UE save also compacts related import/export/name state."
+}

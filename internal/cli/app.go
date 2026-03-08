@@ -18,7 +18,7 @@ import (
 const (
 	structuredOutputFormatJSON = "json"
 	structuredOutputFormatTOML = "toml"
-	defaultToolVersion         = "0.1.7"
+	defaultToolVersion         = "0.1.8"
 )
 
 var currentStructuredOutputFormat = structuredOutputFormatJSON
@@ -149,6 +149,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runInfo(args[1:], stdout, stderr)
 	case "dump":
 		return runDump(args[1:], stdout, stderr)
+	case "generate-skills":
+		return runGenerateSkills(args[1:], stdout, stderr)
 	case "export":
 		return runExport(args[1:], stdout, stderr)
 	case "import":
@@ -181,6 +183,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runClass(args[1:], stdout, stderr)
 	case "level":
 		return runLevel(args[1:], stdout, stderr)
+	case "material":
+		return runMaterial(args[1:], stdout, stderr)
 	case "raw":
 		return runRaw(args[1:], stdout, stderr)
 	case "metadata":
@@ -532,15 +536,17 @@ func runPackageMeta(args []string, stdout, stderr io.Writer) int {
 			"count":  asset.Summary.ExportCount,
 			"offset": asset.Summary.ExportOffset,
 		},
-		"dependsOffset":           asset.Summary.DependsOffset,
-		"thumbnailTableOffset":    asset.Summary.ThumbnailTableOffset,
-		"assetRegistryDataOffset": asset.Summary.AssetRegistryDataOffset,
-		"bulkDataStartOffset":     asset.Summary.BulkDataStartOffset,
-		"preloadDependencyCount":  asset.Summary.PreloadDependencyCount,
-		"preloadDependencyOffset": asset.Summary.PreloadDependencyOffset,
-		"dataResourceOffset":      asset.Summary.DataResourceOffset,
-		"generations":             asset.Summary.Generations,
-		"customVersions":          customVersions,
+		"dependsOffset":               asset.Summary.DependsOffset,
+		"thumbnailTableOffset":        asset.Summary.ThumbnailTableOffset,
+		"importTypeHierarchiesCount":  asset.Summary.ImportTypeHierarchiesCount,
+		"importTypeHierarchiesOffset": asset.Summary.ImportTypeHierarchiesOffset,
+		"assetRegistryDataOffset":     asset.Summary.AssetRegistryDataOffset,
+		"bulkDataStartOffset":         asset.Summary.BulkDataStartOffset,
+		"preloadDependencyCount":      asset.Summary.PreloadDependencyCount,
+		"preloadDependencyOffset":     asset.Summary.PreloadDependencyOffset,
+		"dataResourceOffset":          asset.Summary.DataResourceOffset,
+		"generations":                 asset.Summary.Generations,
+		"customVersions":              customVersions,
 	}
 	return printJSON(stdout, resp)
 }
@@ -832,6 +838,7 @@ func helpCatalog() []helpCategory {
 			Title: "Read/Analysis Commands",
 			Lines: []string{
 				"bpx version",
+				"bpx generate-skills [--output-dir <dir>] [--filter <token>]",
 				"bpx find assets <directory> [--pattern \"*.uasset\"] [--recursive]",
 				"bpx find summary <directory> [--pattern \"*.uasset\"] [--recursive] [--format json|toml] [--out <path>]",
 				"bpx info <file.uasset>",
@@ -846,7 +853,7 @@ func helpCatalog() []helpCategory {
 				"bpx name list <file.uasset>",
 				"bpx package meta <file.uasset>",
 				"bpx package custom-versions <file.uasset>",
-				"bpx package depends <file.uasset>",
+				"bpx package depends <file.uasset> [--reverse]",
 				"bpx package resolve-index <file.uasset> --index <i>",
 				"bpx package section <file.uasset> --name <section>",
 				"bpx localization read <file.uasset> [--export <n>] [--include-history] [--format json|toml|csv]",
@@ -868,7 +875,9 @@ func helpCatalog() []helpCategory {
 				"bpx stringtable read <file.uasset>",
 				"bpx class <file.uasset> --export <n>",
 				"bpx level info <file.umap> --export <n>",
+				"bpx level actor-search <file.umap> [--name <token>] [--actor-label <token>] [--actor-class <token>] [--limit <n>]",
 				"bpx level var-list <file.umap> --actor <name|PersistentLevel.Name|export-index>",
+				"bpx material read <file.uasset> [--export <n>] [--include-hlsl] [--children-root <directory>] [--parent <token>] [--pattern \"*.uasset\"] [--recursive] [--limit <n>]",
 				"bpx raw <file.uasset> --export <n>",
 				"bpx metadata <file.uasset> --export <n>",
 				"bpx validate <file.uasset> [--binary-equality]",
@@ -936,17 +945,55 @@ func usageTopicFromLine(line string) string {
 func helpTopicSummary(topic string) string {
 	switch topic {
 	case "version":
-		return "Show the BPX CLI semantic version."
+		return "Print the BPX CLI semantic version."
 	case "find":
-		return "Search directories for assets and summarize parseability."
-	case "info", "dump", "validate":
-		return "Inspect one package and optionally validate round-trip constraints."
-	case "export", "import", "prop", "name", "package", "datatable", "blueprint", "localization", "metadata", "stringtable", "level", "var", "ref":
-		return "Use subcommands below for read and write operations."
-	case "enum", "struct", "class", "raw":
-		return "Inspect specific UE data structures in one package export."
+		return "Scan directories for assets and summarize parse outcomes."
+	case "generate-skills":
+		return "Generate BPX SKILL.md templates from built-in command help."
+	case "info":
+		return "Read one package summary (engine version, table counts, asset kind)."
+	case "dump":
+		return "Dump package summary/name/import/export tables in structured formats."
+	case "validate":
+		return "Run package integrity checks (exit code 2 when result is not OK)."
+	case "export":
+		return "Inspect export headers or update selected header fields."
+	case "import":
+		return "Inspect ImportMap entries and aggregate import dependency graphs."
+	case "prop":
+		return "Read decoded properties or mutate properties in one export."
 	case "write":
-		return "Rewrite package bytes to a target file while preserving structure."
+		return "Rewrite a parsed package to a separate output path."
+	case "var":
+		return "Inspect variable defaults/declarations and update defaults or names."
+	case "ref":
+		return "Bulk-rewrite reference strings in NameMap and decoded properties."
+	case "name":
+		return "Inspect and edit NameMap entries with UE5-compatible hashes."
+	case "package":
+		return "Inspect package metadata/sections or update package flags."
+	case "localization":
+		return "Read/query/resolve localization data and edit existing text identities."
+	case "datatable":
+		return "Read DataTable-family rows and update DataTable rows."
+	case "blueprint":
+		return "Inspect and analyze blueprint exports, bytecode, and graph data."
+	case "enum":
+		return "List enum exports or update existing enum values."
+	case "struct":
+		return "List struct exports or inspect one struct export."
+	case "stringtable":
+		return "Read and edit StringTable entries and namespace."
+	case "class":
+		return "Inspect one class export payload/header by index."
+	case "level":
+		return "Inspect level exports and read/write actor properties in .umap."
+	case "material":
+		return "Inspect materials, scan child instances, and extract custom HLSL."
+	case "raw":
+		return "Read one export serial payload as base64."
+	case "metadata":
+		return "Read metadata exports or update root/object metadata key-values."
 	default:
 		return ""
 	}
@@ -956,39 +1003,53 @@ func helpTopicBehaviorLines(topic string) []string {
 	switch topic {
 	case "version":
 		return []string{
-			"Prints the CLI semantic version string and exits.",
+			"Prints the CLI semantic version string and exits with code 0.",
+			"No package file is parsed.",
 		}
 	case "find":
 		return []string{
-			"`assets`: collects files matching --pattern under a directory.",
-			"`summary`: parses each match and reports parse summary + parse failures.",
+			"`assets`: collects files matching --pattern under a directory (default `*.uasset`, recursive).",
+			"`summary`: parses each match and reports parsed counts, asset kind counts, and parse failures.",
+			"`summary` continues when per-file parse fails and reports `parseFailures`.",
+			"For map-only scans, pass `--pattern \"*.umap\"`.",
+		}
+	case "generate-skills":
+		return []string{
+			"Generates `SKILL.md` files from built-in BPX help metadata under `--output-dir` (default: `skills`).",
+			"`--filter` limits generation by substring match on skill name/description.",
+			"Generated output applies built-in command-profile supplements baked into the binary.",
 		}
 	case "info":
 		return []string{
-			"Parses one package and prints summary metadata and table counts.",
+			"Parses one package and prints engine version, table counts, and guessed asset kind.",
+			"Read-only command; no files are written.",
 		}
 	case "dump":
 		return []string{
 			"Emits Summary/NameMap/ImportMap/ExportMap payload for one package.",
 			"Supports --format json|toml|yaml and optional --out file write.",
+			"When `--out` is used, stdout returns an acknowledgement object (`file`, `format`, `out`).",
 		}
 	case "validate":
 		return []string{
 			"Runs parse and consistency checks for one package.",
 			"`--binary-equality` also checks no-op rewrite byte equality.",
 			"Returns exit code 2 when validation result is not OK.",
+			"Validation details are emitted in `result` payload.",
 		}
 	case "export":
 		return []string{
 			"`list`: lists export headers with class/object/serial info.",
 			"`info`: inspects one export header by --export index.",
 			"`set-header`: updates selected export header fields (write command).",
+			"`set-header` requires non-empty `--fields` JSON and reports old/new field values.",
 		}
 	case "import":
 		return []string{
 			"`list`: lists ImportMap entries for one package.",
-			"`search`: filters imports by object/class tokens.",
+			"`search`: filters imports by object/class tokens (requires at least one filter).",
 			"`graph`: aggregates import dependency edges across a directory.",
+			"`graph` reports per-file parse failures without aborting the whole scan.",
 		}
 	case "prop":
 		return []string{
@@ -996,21 +1057,27 @@ func helpTopicBehaviorLines(topic string) []string {
 			"`set`: updates an existing property value at --path.",
 			"`add`: appends a new top-level property from --spec JSON.",
 			"`remove`: removes a property at --path.",
+			"Write subcommands report old/new values, size deltas, and changed-byte status.",
 		}
 	case "write":
 		return []string{
 			"Rewrites parsed package bytes to --out using current in-memory structure.",
+			"Never modifies the source file; output target is required.",
 			"`--dry-run` reports changed/bytes without writing files.",
+			"`--backup` creates `<out>.backup` when destination already exists.",
 		}
 	case "var":
 		return []string{
 			"`list`: merges CDO defaults with declaration metadata.",
 			"`set-default`: writes a variable default on CDO properties.",
 			"`rename`: rewrites matching NameMap entries from --from to --to.",
+			"`rename` fails when destination variable is already declared; may return declaration warnings.",
 		}
 	case "ref":
 		return []string{
 			"`rewrite`: replaces reference tokens across NameMap and decodable properties.",
+			"Requires different `--from` and `--to` values.",
+			"Response includes NameMap/property rewrite counts and warnings.",
 		}
 	case "name":
 		return []string{
@@ -1018,15 +1085,18 @@ func helpTopicBehaviorLines(topic string) []string {
 			"`add`: appends a new NameMap entry.",
 			"`set`: rewrites one NameMap entry by index.",
 			"`remove`: removes tail NameMap entry only when safety checks pass.",
+			"`add`/`set` auto-compute UE5 hashes when hash flags are omitted.",
 		}
 	case "package":
 		return []string{
 			"`meta`: shows package GUID/flags/version/offset summary.",
 			"`custom-versions`: lists custom version GUID/version pairs.",
 			"`depends`: decodes DependsMap entries.",
+			"`depends --reverse`: adds reverse dependency view (who references each export).",
 			"`resolve-index`: classifies and resolves signed FPackageIndex.",
 			"`section`: reads one raw package section by --name.",
 			"`set-flags`: rewrites package flags within supported safe scope.",
+			"`set-flags` blocks `PKG_FilterEditorOnly` and `PKG_UnversionedProperties` toggles.",
 		}
 	case "localization":
 		return []string{
@@ -1035,13 +1105,15 @@ func helpTopicBehaviorLines(topic string) []string {
 			"`resolve`: previews localized strings for --culture (optional .locres).",
 			"`set-source`/`set-id`/`set-stringtable-ref`: updates existing text data.",
 			"`rewrite-namespace`/`rekey`: bulk-rewrites namespace or key values.",
+			"`resolve --missing-only` returns unresolved entries only.",
 		}
 	case "datatable":
 		return []string{
 			"`read`: decodes DataTable/CurveTable/CompositeDataTable rows.",
-			"`update-row`: patches fields in an existing row.",
-			"`add-row`: appends a new row (using existing NameMap entries).",
-			"`remove-row`: removes a row by name.",
+			"`update-row`: patches fields in an existing row (DataTable exports only).",
+			"`add-row`: appends a new row (DataTable only; row name must resolve in NameMap).",
+			"`remove-row`: removes a row by name (DataTable only).",
+			"`read --format csv|tsv` flattens rows for spreadsheet-style output.",
 		}
 	case "blueprint":
 		return []string{
@@ -1054,11 +1126,13 @@ func helpTopicBehaviorLines(topic string) []string {
 			"`search`: token-searches nodes/pins in one blueprint package.",
 			"`scan-functions`: aggregates function names across a directory.",
 			"`infer-pack`: emits CFG/callsite/def-use inference artifacts.",
+			"`bytecode`/`disasm` support range selection (`auto|export-map|ustruct-script|serial-full`).",
 		}
 	case "enum":
 		return []string{
 			"`list`: enumerates enum exports.",
 			"`write-value`: updates an existing enum entry value.",
+			"`write-value` edits existing data only (no enum entry insertion/removal).",
 		}
 	case "struct":
 		return []string{
@@ -1071,27 +1145,40 @@ func helpTopicBehaviorLines(topic string) []string {
 			"`write-entry`: updates an existing key value.",
 			"`remove-entry`: removes an existing key.",
 			"`set-namespace`: rewrites string table namespace.",
+			"Write commands operate on existing string table exports and report changed-byte status.",
 		}
 	case "class":
 		return []string{
 			"Inspects one class export payload/header by --export index.",
+			"Output follows generic export info shape (`file`, `export`).",
 		}
 	case "level":
 		return []string{
 			"`info`: inspects one level export.",
+			"`actor-search`: filters PersistentLevel child exports by name/ActorLabel/ActorClass tokens.",
 			"`var-list`: decodes actor properties selected by --actor.",
 			"`var-set`: updates one actor property at --path.",
+			"`--actor` accepts object name, `PersistentLevel.<Name>`, or export index.",
+		}
+	case "material":
+		return []string{
+			"`read`: unified read entry for material inputs/references/parent and optional child scan/HLSL summary.",
+			"`inspect`: summarizes material inputs, asset references, and direct parent material.",
+			"`children`: scans a directory for material instances matching --parent token.",
+			"`hlsl`: shows custom-node HLSL snippets (`UMaterialExpressionCustom::Code`) and explains full-translation limits.",
 		}
 	case "raw":
 		return []string{
 			"Reads raw serial payload bytes for one export.",
 			"`--full` includes the complete base64 payload.",
+			"Default output keeps payload compact via abbreviated base64 fields.",
 		}
 	case "metadata":
 		return []string{
 			"Default form reads one metadata export by --export index.",
 			"`set-root`: updates root metadata key/value.",
 			"`set-object`: updates metadata for one import key/value.",
+			"Set commands report the resolved property path that was mutated.",
 		}
 	default:
 		return nil

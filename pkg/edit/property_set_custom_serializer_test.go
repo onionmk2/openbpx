@@ -11,32 +11,37 @@ import (
 )
 
 func TestBuildPropertySetMutationCustomStructIntGolden(t *testing.T) {
-	beforePath := filepath.Join("..", "..", "testdata", "golden", "operations", "prop_set_custom_struct_int", "before.uasset")
-	afterPath := filepath.Join("..", "..", "testdata", "golden", "operations", "prop_set_custom_struct_int", "after.uasset")
-	beforeBytes, err := os.ReadFile(beforePath)
-	if err != nil {
-		t.Fatalf("read before fixture: %v", err)
-	}
-	afterBytes, err := os.ReadFile(afterPath)
-	if err != nil {
-		t.Fatalf("read after fixture: %v", err)
-	}
+	for _, root := range goldenFixtureRoots(t, "operations") {
+		root := root
+		t.Run(filepath.Base(root), func(t *testing.T) {
+			beforePath := goldenOperationFixturePath(root, "prop_set_custom_struct_int", "before.uasset")
+			afterPath := goldenOperationFixturePath(root, "prop_set_custom_struct_int", "after.uasset")
+			beforeBytes, err := os.ReadFile(beforePath)
+			if err != nil {
+				t.Fatalf("read before fixture: %v", err)
+			}
+			afterBytes, err := os.ReadFile(afterPath)
+			if err != nil {
+				t.Fatalf("read after fixture: %v", err)
+			}
 
-	asset, err := uasset.ParseBytes(beforeBytes, uasset.DefaultParseOptions())
-	if err != nil {
-		t.Fatalf("parse before fixture: %v", err)
-	}
-	res, err := BuildPropertySetMutation(asset, 4, "FixtureCustom.IntVal", "42")
-	if err != nil {
-		t.Fatalf("build mutation: %v", err)
-	}
-	outBytes, err := RewriteAsset(asset, []ExportMutation{res.Mutation})
-	if err != nil {
-		t.Fatalf("rewrite asset: %v", err)
-	}
+			asset, err := uasset.ParseBytes(beforeBytes, uasset.DefaultParseOptions())
+			if err != nil {
+				t.Fatalf("parse before fixture: %v", err)
+			}
+			res, err := BuildPropertySetMutation(asset, 4, "FixtureCustom.IntVal", "42")
+			if err != nil {
+				t.Fatalf("build mutation: %v", err)
+			}
+			outBytes, err := RewriteAsset(asset, []ExportMutation{res.Mutation})
+			if err != nil {
+				t.Fatalf("rewrite asset: %v", err)
+			}
 
-	if !equalBytesIgnoringRanges(outBytes, afterBytes, [][2]int{{24, 20}}) {
-		t.Fatalf("rewritten bytes do not match golden fixture")
+			if !equalBytesIgnoringRanges(outBytes, afterBytes, [][2]int{{24, 20}}) {
+				t.Fatalf("rewritten bytes do not match golden fixture")
+			}
+		})
 	}
 }
 
@@ -525,6 +530,73 @@ func TestWriteValueByTypeStructAnimationAttributeIdentifier(t *testing.T) {
 	nameField := fields["Name"].(map[string]any)["value"].(map[string]any)
 	if got := nameField["name"]; got != "AttrA" {
 		t.Fatalf("Name: got %v", got)
+	}
+}
+
+func TestWriteValueByTypeStructLinearColor(t *testing.T) {
+	names := []uasset.NameEntry{
+		{Value: "None"},
+		{Value: "StructProperty"},
+		{Value: "LinearColor"},
+	}
+	asset := &uasset.Asset{
+		Names: names,
+		Summary: uasset.PackageSummary{
+			FileVersionUE5: 1017,
+		},
+	}
+	node := &typeTreeNode{
+		Name: "StructProperty",
+		Children: []*typeTreeNode{
+			{Name: "LinearColor"},
+		},
+	}
+	value := map[string]any{
+		"structType": "LinearColor",
+		"value": map[string]any{
+			"r": 0.25,
+			"g": 0.5,
+			"b": 0.75,
+			"a": 1.0,
+		},
+	}
+	raw, err := encodeValueByType(asset, node, value, binary.LittleEndian)
+	if err != nil {
+		t.Fatalf("encode struct value: %v", err)
+	}
+
+	decodeAsset := &uasset.Asset{
+		Raw:   uasset.RawAsset{Bytes: raw},
+		Names: names,
+		Summary: uasset.PackageSummary{
+			FileVersionUE5: 1017,
+		},
+	}
+	tag := uasset.PropertyTag{
+		TypeNodes: []uasset.PropertyTypeNode{
+			{Name: uasset.NameRef{Index: 1}, InnerCount: 1},
+			{Name: uasset.NameRef{Index: 2}, InnerCount: 0},
+		},
+		Size:        int32(len(raw)),
+		ValueOffset: 0,
+	}
+	decoded, ok := decodeAsset.DecodePropertyValue(tag)
+	if !ok {
+		t.Fatalf("decode encoded struct failed")
+	}
+	out := decoded.(map[string]any)
+	fields := out["value"].(map[string]any)
+	if got := fields["r"]; got != float32(0.25) {
+		t.Fatalf("r: got %v", got)
+	}
+	if got := fields["g"]; got != float32(0.5) {
+		t.Fatalf("g: got %v", got)
+	}
+	if got := fields["b"]; got != float32(0.75) {
+		t.Fatalf("b: got %v", got)
+	}
+	if got := fields["a"]; got != float32(1.0) {
+		t.Fatalf("a: got %v", got)
 	}
 }
 

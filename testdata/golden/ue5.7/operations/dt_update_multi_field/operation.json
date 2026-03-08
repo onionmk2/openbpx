@@ -1,0 +1,11 @@
+{
+	"command": "datatable update-row",
+	"args":
+	{
+		"row": "Row_A",
+		"values": "{\"Score\":50,\"Rate\":0.1}"
+	},
+	"ue_procedure": "Update DataTable multiple columns",
+	"expect": "byte_equal",
+	"notes": "Validated on ue5.6/ue5.7 DataTable fixtures."
+}

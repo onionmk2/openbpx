@@ -1,0 +1,14 @@
+{
+	"command": "localization set-stringtable-ref",
+	"args":
+	{
+		"export": "11",
+		"path": "CategoryName",
+		"table": "UI.Menu",
+		"key": "BTN_OK"
+	},
+	"ue_procedure": "Reject StringTable ref conversion when alternate table name is missing from NameMap",
+	"expect": "error_equal",
+	"error_contains": "is not present in NameMap",
+	"notes": "StringTable ref update must fail when alternate table NameMap growth would be required."
+}

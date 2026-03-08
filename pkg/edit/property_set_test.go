@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/wilddogjp/openbpx/pkg/uasset"
+	"github.com/zeebo/blake3"
 )
 
 func TestParsePathSupportsPlannedSyntax(t *testing.T) {
@@ -45,6 +46,33 @@ func TestResolveEnumNameIndexSupportsScopedAndShortForms(t *testing.T) {
 	}
 	if got := resolveEnumNameIndex(names, "EBPXFixtureEnum", "BPXEnum_ValueC"); got != -1 {
 		t.Fatalf("missing enum name should return -1, got %d", got)
+	}
+}
+
+func TestEnumValueCandidatesSupportsShortNameFamilies(t *testing.T) {
+	names := []uasset.NameEntry{
+		{Value: "BPXEnum_ValueB"},
+		{Value: "BPXEnum_ValueA"},
+		{Value: "BPXEnum_ValueC"},
+	}
+	current := map[string]any{
+		"enumType": "EBPXFixtureEnum",
+		"value":    "EBPXFixtureEnum::BPXEnum_ValueC",
+	}
+
+	got := enumValueCandidates(names, "EBPXFixtureEnum", current)
+	want := []string{
+		"EBPXFixtureEnum::BPXEnum_ValueA",
+		"EBPXFixtureEnum::BPXEnum_ValueB",
+		"EBPXFixtureEnum::BPXEnum_ValueC",
+	}
+	if len(got) != len(want) {
+		t.Fatalf("enumValueCandidates length: got %d want %d (%v)", len(got), len(want), got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("enumValueCandidates[%d]: got %q want %q (all=%v)", i, got[i], want[i], got)
+		}
 	}
 }
 
@@ -114,6 +142,8 @@ func TestRewriteAssetRecalculatesOffsetsForVariableLengthEdit(t *testing.T) {
 	if got, want := v, "hello-world-long"; got != want {
 		t.Fatalf("rewritten value: got %v want %v", got, want)
 	}
+
+	verifySavedHash(t, outBytes)
 }
 
 func TestRewriteAssetNoMutationIsByteIdentical(t *testing.T) {
@@ -132,11 +162,56 @@ func TestRewriteAssetNoMutationIsByteIdentical(t *testing.T) {
 	}
 }
 
+func verifySavedHash(t *testing.T, data []byte) {
+	t.Helper()
+
+	pos, _, hasSavedHash, err := scanSavedHashField(data, ue5ImportTypeHierarchies)
+	if err != nil {
+		t.Fatalf("scanSavedHashField: %v", err)
+	}
+	if !hasSavedHash {
+		t.Fatalf("expected saved hash field")
+	}
+	if pos < 0 || pos+savedHashSize > len(data) {
+		t.Fatalf("saved hash position out of range: %d", pos)
+	}
+
+	hashInput := append([]byte(nil), data...)
+	for i := 0; i < savedHashSize; i++ {
+		hashInput[pos+i] = 0
+	}
+	sum := blake3.Sum256(hashInput)
+	if got, want := data[pos:pos+savedHashSize], sum[:savedHashSize]; !bytes.Equal(got, want) {
+		t.Fatalf("saved hash mismatch: got %x want %x", got, want)
+	}
+}
+
 func TestWriteFStringEmptyUsesZeroLength(t *testing.T) {
 	w := newByteWriter(binary.LittleEndian, 8)
 	w.writeFString("")
 	if got, want := w.bytes(), []byte{0, 0, 0, 0}; !bytes.Equal(got, want) {
 		t.Fatalf("empty FString encoding mismatch: got %v want %v", got, want)
+	}
+}
+
+func TestCoerceTextPropertyUsesEditorPersistedFlagsForPlainString(t *testing.T) {
+	current := map[string]any{
+		"flags":           int32(8),
+		"historyType":     "Base",
+		"historyTypeCode": uint8(0),
+		"sourceString":    "before",
+		"value":           "before",
+	}
+
+	got, err := coerceTextProperty(&uasset.Asset{}, current, "after")
+	if err != nil {
+		t.Fatalf("coerceTextProperty: %v", err)
+	}
+	if flags, ok := got["flags"].(int32); !ok || flags != 0 {
+		t.Fatalf("flags: got %#v want %d", got["flags"], 0)
+	}
+	if value, _ := got["value"].(string); value != "after" {
+		t.Fatalf("value: got %q want %q", value, "after")
 	}
 }
 

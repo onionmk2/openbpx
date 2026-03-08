@@ -1,0 +1,13 @@
+{
+	"command": "prop set",
+	"args":
+	{
+		"export": 1,
+		"path": "LastEditedDocuments[0].EditedObjectPath",
+		"value": "{\"packageName\":\"/Game/BPXFixtures/Parse/BP_WithMetadata\",\"assetName\":\"BP_WithMetadata_C\"}"
+	},
+	"ue_procedure": "Attempt soft object path update inside EditedDocumentInfo array",
+	"expect": "error_equal",
+	"error_contains": "EditedDocumentInfo is not editable",
+	"notes": "Fixture now asserts explicit rejection with byte-identical output."
+}

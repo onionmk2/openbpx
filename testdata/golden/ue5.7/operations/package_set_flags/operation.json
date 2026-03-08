@@ -1,0 +1,10 @@
+{
+	"command": "package set-flags",
+	"args":
+	{
+		"flags": "PKG_REQUIRESLOCALIZATIONGATHER|PKG_RUNTIMEGENERATED"
+	},
+	"ue_procedure": "Set package flags without touching shape-sensitive bits",
+	"expect": "byte_equal",
+	"notes": "Validated on ue5.6/ue5.7 parse fixtures."
+}

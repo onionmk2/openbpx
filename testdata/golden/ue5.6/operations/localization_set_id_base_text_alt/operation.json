@@ -1,0 +1,13 @@
+{
+	"command": "localization set-id",
+	"args":
+	{
+		"export": "11",
+		"path": "CategoryName",
+		"namespace": "UI",
+		"key": "HUD_TITLE"
+	},
+	"ue_procedure": "Update Base TextProperty localization id to alternate key",
+	"expect": "byte_equal",
+	"notes": "Base TextProperty localization id rewrite to HUD_TITLE."
+}

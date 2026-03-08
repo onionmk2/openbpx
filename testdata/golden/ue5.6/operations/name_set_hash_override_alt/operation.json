@@ -1,0 +1,12 @@
+{
+  "command": "name set",
+  "args": {
+    "index": "2",
+    "value": "BPX_Name_Alt",
+    "non-case-hash": "3333",
+    "case-preserving-hash": "4444"
+  },
+  "ue_procedure": "Update one NameMap entry with alternate explicit hashes",
+  "expect": "byte_equal",
+  "notes": "Low-level NameMap set fixture with alternate hash override."
+}

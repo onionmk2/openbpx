@@ -1,0 +1,9 @@
+{
+  "command": "name add",
+  "args": {
+    "value": "BPX_OpName"
+  },
+  "ue_procedure": "Append one NameMap entry",
+  "expect": "byte_equal",
+  "notes": "Low-level NameMap append fixture."
+}

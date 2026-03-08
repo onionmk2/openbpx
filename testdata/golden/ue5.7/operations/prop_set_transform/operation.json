@@ -1,0 +1,12 @@
+{
+	"command": "prop set",
+	"args":
+	{
+		"export": 3,
+		"path": "VTransform",
+		"value": "{\"structType\":\"Transform\",\"value\":{\"Translation\":{\"type\":\"StructProperty(Vector(/Script/CoreUObject))\",\"value\":{\"structType\":\"Vector\",\"value\":{\"x\":1,\"y\":2,\"z\":3}}},\"Rotation\":{\"type\":\"StructProperty(Quat(/Script/CoreUObject))\",\"value\":{\"structType\":\"Quat\",\"value\":{\"x\":0,\"y\":0,\"z\":0,\"w\":1}}},\"Scale3D\":{\"type\":\"StructProperty(Vector(/Script/CoreUObject))\",\"value\":{\"structType\":\"Vector\",\"value\":{\"x\":1,\"y\":1,\"z\":1}}}}}"
+	},
+	"ue_procedure": "Update Transform value on math fixture",
+	"expect": "byte_equal",
+	"notes": "Validated on ue5.6/ue5.7 math fixture roots."
+}

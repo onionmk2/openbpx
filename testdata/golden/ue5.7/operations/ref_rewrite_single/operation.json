@@ -1,0 +1,18 @@
+{
+	"command": "ref rewrite",
+	"args":
+	{
+		"from": "/Game/Old/Mesh",
+		"to": "/Game/New/Mesh"
+	},
+	"ue_procedure": "Rewrite one soft reference",
+	"expect": "byte_equal",
+	"notes": "ref rewrite supports single-path replacements.",
+	"ignore_offsets": [
+		{
+			"offset": 24,
+			"length": 20,
+			"reason": "ue-save-nondeterministic"
+		}
+	]
+}

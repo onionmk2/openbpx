@@ -403,6 +403,7 @@ func nextKnownOffset(asset *uasset.Asset, start int64) int64 {
 	add(int64(s.SoftPackageReferencesOffset))
 	add(int64(s.SearchableNamesOffset))
 	add(int64(s.ThumbnailTableOffset))
+	add(int64(s.ImportTypeHierarchiesOffset))
 	add(int64(s.AssetRegistryDataOffset))
 	add(s.BulkDataStartOffset)
 	add(int64(s.WorldTileInfoDataOffset))

@@ -10,68 +10,88 @@ import (
 )
 
 func TestBuildPropertyAddMutationMatchesUEFixture(t *testing.T) {
-	beforePath := filepath.Join("..", "..", "testdata", "golden", "operations", "prop_add", "before.uasset")
-	afterPath := filepath.Join("..", "..", "testdata", "golden", "operations", "prop_add", "after.uasset")
-	beforeAsset := mustParseAsset(t, beforePath)
-	wantAfter := mustReadFile(t, afterPath)
+	for _, root := range goldenFixtureRoots(t, "operations") {
+		root := root
+		t.Run(filepath.Base(root), func(t *testing.T) {
+			beforePath := goldenOperationFixturePath(root, "prop_add", "before.uasset")
+			afterPath := goldenOperationFixturePath(root, "prop_add", "after.uasset")
+			beforeAsset := mustParseAsset(t, beforePath)
+			wantAfter := mustReadFile(t, afterPath)
 
-	res, err := BuildPropertyAddMutation(beforeAsset, 4, `{"name":"bCanBeDamaged","type":"BoolProperty","value":false}`)
-	if err != nil {
-		t.Fatalf("BuildPropertyAddMutation: %v", err)
-	}
-	if res.PropertyName != "bCanBeDamaged" {
-		t.Fatalf("PropertyName: got %q want bCanBeDamaged", res.PropertyName)
-	}
+			res, err := BuildPropertyAddMutation(beforeAsset, 4, `{"name":"bCanBeDamaged","type":"BoolProperty","value":false}`)
+			if err != nil {
+				t.Fatalf("BuildPropertyAddMutation: %v", err)
+			}
+			if res.PropertyName != "bCanBeDamaged" {
+				t.Fatalf("PropertyName: got %q want bCanBeDamaged", res.PropertyName)
+			}
 
-	gotAfter, err := RewriteAsset(beforeAsset, []ExportMutation{res.Mutation})
-	if err != nil {
-		t.Fatalf("RewriteAsset: %v", err)
-	}
-	if !equalBytesWithIgnoredRanges(gotAfter, wantAfter, []ignoreRange{{Offset: 24, Length: 20}}) {
-		t.Fatalf("rewritten bytes do not match UE fixture")
+			gotAfter, err := RewriteAsset(beforeAsset, []ExportMutation{res.Mutation})
+			if err != nil {
+				t.Fatalf("RewriteAsset: %v", err)
+			}
+			if !equalBytesWithIgnoredRanges(gotAfter, wantAfter, []ignoreRange{{Offset: 24, Length: 20}}) {
+				t.Fatalf("rewritten bytes do not match UE fixture")
+			}
+		})
 	}
 }
 
 func TestBuildPropertyRemoveMutationMatchesUEFixture(t *testing.T) {
-	beforePath := filepath.Join("..", "..", "testdata", "golden", "operations", "prop_remove", "before.uasset")
-	afterPath := filepath.Join("..", "..", "testdata", "golden", "operations", "prop_remove", "after.uasset")
-	beforeAsset := mustParseAsset(t, beforePath)
-	wantAfter := mustReadFile(t, afterPath)
+	for _, root := range goldenFixtureRoots(t, "operations") {
+		root := root
+		t.Run(filepath.Base(root), func(t *testing.T) {
+			beforePath := goldenOperationFixturePath(root, "prop_remove", "before.uasset")
+			afterPath := goldenOperationFixturePath(root, "prop_remove", "after.uasset")
+			beforeAsset := mustParseAsset(t, beforePath)
+			wantAfter := mustReadFile(t, afterPath)
 
-	res, err := BuildPropertyRemoveMutation(beforeAsset, 4, "bCanBeDamaged")
-	if err != nil {
-		t.Fatalf("BuildPropertyRemoveMutation: %v", err)
-	}
-	if res.PropertyName != "bCanBeDamaged" {
-		t.Fatalf("PropertyName: got %q want bCanBeDamaged", res.PropertyName)
-	}
+			res, err := BuildPropertyRemoveMutation(beforeAsset, 4, "bCanBeDamaged")
+			if err != nil {
+				t.Fatalf("BuildPropertyRemoveMutation: %v", err)
+			}
+			if res.PropertyName != "bCanBeDamaged" {
+				t.Fatalf("PropertyName: got %q want bCanBeDamaged", res.PropertyName)
+			}
 
-	gotAfter, err := RewriteAsset(beforeAsset, []ExportMutation{res.Mutation})
-	if err != nil {
-		t.Fatalf("RewriteAsset: %v", err)
-	}
-	if !equalBytesWithIgnoredRanges(gotAfter, wantAfter, []ignoreRange{{Offset: 24, Length: 20}}) {
-		t.Fatalf("rewritten bytes do not match UE fixture")
+			gotAfter, err := RewriteAsset(beforeAsset, []ExportMutation{res.Mutation})
+			if err != nil {
+				t.Fatalf("RewriteAsset: %v", err)
+			}
+			if !equalBytesWithIgnoredRanges(gotAfter, wantAfter, []ignoreRange{{Offset: 24, Length: 20}}) {
+				t.Fatalf("rewritten bytes do not match UE fixture")
+			}
+		})
 	}
 }
 
 func TestBuildPropertyAddMutationRejectsExistingProperty(t *testing.T) {
-	beforePath := filepath.Join("..", "..", "testdata", "golden", "operations", "prop_remove", "before.uasset")
-	beforeAsset := mustParseAsset(t, beforePath)
+	for _, root := range goldenFixtureRoots(t, "operations") {
+		root := root
+		t.Run(filepath.Base(root), func(t *testing.T) {
+			beforePath := goldenOperationFixturePath(root, "prop_remove", "before.uasset")
+			beforeAsset := mustParseAsset(t, beforePath)
 
-	_, err := BuildPropertyAddMutation(beforeAsset, 4, `{"name":"bCanBeDamaged","type":"BoolProperty","value":false}`)
-	if err == nil {
-		t.Fatalf("expected error when adding existing property")
+			_, err := BuildPropertyAddMutation(beforeAsset, 4, `{"name":"bCanBeDamaged","type":"BoolProperty","value":false}`)
+			if err == nil {
+				t.Fatalf("expected error when adding existing property")
+			}
+		})
 	}
 }
 
 func TestBuildPropertyRemoveMutationRejectsMissingProperty(t *testing.T) {
-	beforePath := filepath.Join("..", "..", "testdata", "golden", "operations", "prop_add", "before.uasset")
-	beforeAsset := mustParseAsset(t, beforePath)
+	for _, root := range goldenFixtureRoots(t, "operations") {
+		root := root
+		t.Run(filepath.Base(root), func(t *testing.T) {
+			beforePath := goldenOperationFixturePath(root, "prop_add", "before.uasset")
+			beforeAsset := mustParseAsset(t, beforePath)
 
-	_, err := BuildPropertyRemoveMutation(beforeAsset, 4, "bCanBeDamaged")
-	if err == nil {
-		t.Fatalf("expected error when removing missing property")
+			_, err := BuildPropertyRemoveMutation(beforeAsset, 4, "bCanBeDamaged")
+			if err == nil {
+				t.Fatalf("expected error when removing missing property")
+			}
+		})
 	}
 }
 

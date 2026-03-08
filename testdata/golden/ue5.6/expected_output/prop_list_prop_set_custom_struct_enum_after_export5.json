@@ -1,0 +1,86 @@
+{
+  "argv": [
+    "prop",
+    "list",
+    "testdata/golden/operations/prop_set_custom_struct_enum/after.uasset",
+    "--export",
+    "5"
+  ],
+  "expected": {
+    "className": "Fixture_C",
+    "decoded": true,
+    "export": 5,
+    "file": "testdata/golden/operations/prop_set_custom_struct_enum/after.uasset",
+    "objectName": "Default__Fixture_C",
+    "properties": [
+      {
+        "arrayIndex": 0,
+        "flags": 0,
+        "name": "FixtureEnumAnchor",
+        "offset": 20515,
+        "size": 8,
+        "type": "ByteProperty(EBPXFixtureEnum(/Script/BPXFixtureGenerator))",
+        "value": {
+          "enumType": "EBPXFixtureEnum",
+          "value": "EBPXFixtureEnum::BPXEnum_ValueB"
+        },
+        "valueOffset": 20564
+      },
+      {
+        "arrayIndex": 0,
+        "flags": 0,
+        "name": "FixtureEnumAnchorAlt",
+        "offset": 20572,
+        "size": 8,
+        "type": "ByteProperty(EBPXFixtureEnum(/Script/BPXFixtureGenerator))",
+        "value": {
+          "enumType": "EBPXFixtureEnum",
+          "value": "EBPXFixtureEnum::BPXEnum_ValueA"
+        },
+        "valueOffset": 20621
+      },
+      {
+        "arrayIndex": 0,
+        "flags": 0,
+        "name": "FixtureCustom",
+        "offset": 20629,
+        "size": 65,
+        "type": "StructProperty(BPXFixtureCustomStruct(/Script/BPXFixtureGenerator))",
+        "value": {
+          "structType": "BPXFixtureCustomStruct",
+          "value": {
+            "EnumVal": {
+              "flags": 0,
+              "offset": 0,
+              "type": "ByteProperty(EBPXFixtureEnum(/Script/BPXFixtureGenerator))",
+              "typeNodes": [
+                {
+                  "innerCount": 1,
+                  "name": "ByteProperty"
+                },
+                {
+                  "innerCount": 1,
+                  "name": "EBPXFixtureEnum"
+                },
+                {
+                  "innerCount": 0,
+                  "name": "/Script/BPXFixtureGenerator"
+                }
+              ],
+              "value": {
+                "enumType": "EBPXFixtureEnum",
+                "value": "EBPXFixtureEnum::BPXEnum_ValueB"
+              }
+            }
+          }
+        },
+        "valueOffset": 20678
+      }
+    ],
+    "warnings": null
+  },
+  "generatedAt": "2026-03-06T17:08:06Z",
+  "generatedBy": "scripts/gen_expected_output",
+  "name": "prop_list_prop_set_custom_struct_enum_after_export5",
+  "oracle": "ue-fixture"
+}

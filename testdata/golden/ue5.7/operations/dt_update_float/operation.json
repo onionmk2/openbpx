@@ -1,0 +1,11 @@
+{
+	"command": "datatable update-row",
+	"args":
+	{
+		"row": "Row_B",
+		"values": "{\"Rate\":1.25}"
+	},
+	"ue_procedure": "Update DataTable float column",
+	"expect": "byte_equal",
+	"notes": "Validated on ue5.6/ue5.7 DataTable fixtures."
+}

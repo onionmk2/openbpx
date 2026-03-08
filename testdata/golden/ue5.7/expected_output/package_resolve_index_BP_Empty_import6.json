@@ -1,0 +1,19 @@
+{
+  "argv": [
+    "package",
+    "resolve-index",
+    "testdata/golden/parse/BP_Empty.uasset",
+    "--index",
+    "-6"
+  ],
+  "expected": {
+    "file": "testdata/golden/parse/BP_Empty.uasset",
+    "index": -6,
+    "kind": "import",
+    "resolved": "import:6:Actor"
+  },
+  "generatedAt": "2026-03-06T17:08:06Z",
+  "generatedBy": "scripts/gen_expected_output",
+  "name": "package_resolve_index_BP_Empty_import6",
+  "oracle": "ue-fixture"
+}

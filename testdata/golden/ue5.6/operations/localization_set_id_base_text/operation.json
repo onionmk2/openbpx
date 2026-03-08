@@ -1,0 +1,13 @@
+{
+	"command": "localization set-id",
+	"args":
+	{
+		"export": "11",
+		"path": "CategoryName",
+		"namespace": "UI",
+		"key": "BTN_OK"
+	},
+	"ue_procedure": "Update Base TextProperty localization id",
+	"expect": "byte_equal",
+	"notes": "Existing Base TextProperty namespace/key rewrite."
+}

@@ -1,0 +1,10 @@
+{
+  "command": "name set",
+  "args": {
+    "index": "3",
+    "value": "core_redirects_case"
+  },
+  "ue_procedure": "Update one NameMap entry to a new ASCII case variant",
+  "expect": "byte_equal",
+  "notes": "Low-level NameMap case-variant rewrite fixture."
+}

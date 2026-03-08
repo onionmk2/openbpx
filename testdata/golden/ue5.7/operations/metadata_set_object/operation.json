@@ -1,0 +1,13 @@
+{
+	"command": "metadata set-object",
+	"args":
+	{
+		"export": 11,
+		"import": 10,
+		"key": "CategoryName",
+		"value": "Gameplay"
+	},
+	"ue_procedure": "Update object metadata fallback path on SCS node metadata fixture",
+	"expect": "byte_equal",
+	"notes": "Covers metadata set-object command path."
+}

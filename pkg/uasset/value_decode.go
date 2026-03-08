@@ -1638,6 +1638,8 @@ func isKnownTaggedStructDecodeCandidate(structTypeLower string) bool {
 	switch structTypeLower {
 	case "levelviewportinfo",
 		"animationattributeidentifier",
+		"bpvariabledescription",
+		"bpvariablemetadataentry",
 		"animnotifyevent",
 		"animsyncmarker",
 		"animcurvebase",
@@ -2258,6 +2260,8 @@ func (a *Asset) decodeTaggedStructFromBytes(raw []byte, structType string) (any,
 		Raw:     RawAsset{Bytes: raw},
 		Summary: a.Summary,
 		Names:   a.Names,
+		Imports: a.Imports,
+		Exports: a.Exports,
 	}
 	props := tmp.ParseTaggedPropertiesRange(0, len(raw), false)
 	if len(props.Warnings) > 0 || props.EndOffset <= 0 || props.EndOffset > len(raw) {
@@ -2273,13 +2277,42 @@ func (a *Asset) decodeTaggedStructFromBytes(raw []byte, structType string) (any,
 func (a *Asset) decodeTaggedStructFields(props []PropertyTag) map[string]any {
 	fields := map[string]any{}
 	for _, p := range props {
-		entry := map[string]any{"type": p.TypeString(a.Names)}
+		entry := map[string]any{
+			"type":      p.TypeString(a.Names),
+			"typeNodes": encodePropertyTypeNodesForJSON(p.TypeNodes, a.Names),
+			"flags":     p.Flags,
+			"offset":    p.Offset,
+		}
+		if p.Flags&propertyFlagHasArrayIndex != 0 {
+			entry["arrayIndex"] = p.ArrayIndex
+		}
+		if p.PropertyGUID != nil {
+			entry["propertyGuid"] = p.PropertyGUID.String()
+		}
+		if p.Flags&propertyFlagHasPropertyExtensions != 0 {
+			entry["propertyExtensions"] = p.PropertyExtensions
+			if p.PropertyExtensions&propertyExtensionOverridableInfo != 0 {
+				entry["overridableOperation"] = p.OverridableOperation
+				entry["experimentalOverridableLogic"] = p.ExperimentalOverridableLogic
+			}
+		}
 		if val, ok := a.DecodePropertyValue(p); ok {
 			entry["value"] = wrapDecodedStructFieldValue(p.TypeNodes, a.Names, val)
 		}
 		fields[p.Name.Display(a.Names)] = entry
 	}
 	return fields
+}
+
+func encodePropertyTypeNodesForJSON(nodes []PropertyTypeNode, names []NameEntry) []map[string]any {
+	out := make([]map[string]any, 0, len(nodes))
+	for _, node := range nodes {
+		out = append(out, map[string]any{
+			"name":       node.Name.Display(names),
+			"innerCount": node.InnerCount,
+		})
+	}
+	return out
 }
 
 func (a *Asset) decodePerQualityLevelStructFromReader(r *byteReader, structType string, valueIsFloat bool) (any, bool) {

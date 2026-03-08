@@ -1,0 +1,10 @@
+{
+  "command": "write",
+  "args": {
+    "out": "{TARGET}.out.uasset"
+  },
+  "ue_procedure": "Write blueprint package bytes to a new output file without edits",
+  "expect": "byte_equal",
+  "notes": "Round-trip write output for BP_WithMetadata should stay byte-identical.",
+  "actual_file": "{TARGET}.out.uasset"
+}

@@ -16,3 +16,6 @@ pkg/uasset/testdata/fuzz/
 
 # Skill-local downloaded binaries (do not commit)
 .agents/skills/bpx/bpx_*
+
+# Local fixture-generation configuration (machine-specific paths)
+scripts/local-fixtures.config.json

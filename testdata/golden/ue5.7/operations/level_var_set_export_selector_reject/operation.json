@@ -1,0 +1,12 @@
+{
+  "command": "level var-set",
+  "args": {
+    "actor": "999",
+    "path": "NavigationSystemConfig",
+    "value": "0"
+  },
+  "ue_procedure": "Reject level var-set when export-index selector is out of range",
+  "expect": "error_equal",
+  "error_contains": "export index out of range",
+  "notes": "Level var-set must fail for invalid export selectors."
+}

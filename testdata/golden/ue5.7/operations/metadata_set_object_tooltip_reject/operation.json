@@ -1,0 +1,14 @@
+{
+	"command": "metadata set-object",
+	"args":
+	{
+		"export": "1",
+		"import": "10",
+		"key": "ToolTip",
+		"value": "Updated"
+	},
+	"ue_procedure": "Reject object metadata update when editable path is absent",
+	"expect": "error_equal",
+	"error_contains": "no editable path matched",
+	"notes": "Object metadata update must fail when no fallback path exists."
+}

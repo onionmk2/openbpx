@@ -1,0 +1,12 @@
+{
+	"command": "localization set-source",
+	"args":
+	{
+		"export": 11,
+		"path": "CategoryName",
+		"value": "Gameplay"
+	},
+	"ue_procedure": "Update existing TextProperty source string",
+	"expect": "byte_equal",
+	"notes": "Existing TextProperty source-string rewrite."
+}

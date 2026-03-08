@@ -1,0 +1,10 @@
+{
+  "command": "write",
+  "args": {
+    "out": "{TARGET}.out.uasset"
+  },
+  "ue_procedure": "Write StringTable package bytes to a new output file without edits",
+  "expect": "byte_equal",
+  "notes": "Round-trip write output for ST_UI should stay byte-identical.",
+  "actual_file": "{TARGET}.out.uasset"
+}

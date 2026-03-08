@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -52,6 +53,11 @@ func runMetadataSetRoot(args []string, stdout, stderr io.Writer) int {
 	outBytes, result, usedPath, err := applyFirstPropertyMutation(asset, idx, paths, valueJSON)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: %v\n", err)
+		return 1
+	}
+	outBytes, err = applyDerivedLocalizationUpdates(outBytes, *opts, result.OldValue, result.NewValue, localizationSnapshotSourceString(result.NewValue) == "")
+	if err != nil {
+		fmt.Fprintf(stderr, "error: update derived localization data: %v\n", err)
 		return 1
 	}
 	changed := !bytes.Equal(asset.Raw.Bytes, outBytes)
@@ -129,6 +135,11 @@ func runMetadataSetObject(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "error: %v\n", err)
 		return 1
 	}
+	outBytes, err = applyDerivedLocalizationUpdates(outBytes, *opts, result.OldValue, result.NewValue, localizationSnapshotSourceString(result.NewValue) == "")
+	if err != nil {
+		fmt.Fprintf(stderr, "error: update derived localization data: %v\n", err)
+		return 1
+	}
 	changed := !bytes.Equal(asset.Raw.Bytes, outBytes)
 
 	resp := map[string]any{
@@ -192,6 +203,36 @@ func runEnumWriteValue(args []string, stdout, stderr io.Writer) int {
 	outBytes, result, usedPath, err := applyFirstPropertyMutation(asset, idx, []string{*name}, valueJSON)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: %v\n", err)
+		return 1
+	}
+	updatedAsset, err := uasset.ParseBytes(outBytes, *opts)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: reparse rewritten asset: %v\n", err)
+		return 1
+	}
+	outBytes, _, err = rewriteAssetRegistryValueChange(updatedAsset, result.PropertyName, result.NewValue, result.OldValue, result.NewValue)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: rewrite asset registry search data: %v\n", err)
+		return 1
+	}
+	updatedAsset, err = uasset.ParseBytes(outBytes, *opts)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: reparse asset after asset registry rewrite: %v\n", err)
+		return 1
+	}
+	outBytes, _, err = compactPropertyWriteNameMap(updatedAsset, result.OldValue, result.NewValue, *opts)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: compact property write name map: %v\n", err)
+		return 1
+	}
+	updatedAsset, err = uasset.ParseBytes(outBytes, *opts)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: reparse asset after name map compaction: %v\n", err)
+		return 1
+	}
+	outBytes, _, err = compactPropertyTagNameIfUnused(updatedAsset, *opts, result.PropertyName)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: compact enum property name: %v\n", err)
 		return 1
 	}
 	changed := !bytes.Equal(asset.Raw.Bytes, outBytes)
@@ -436,12 +477,14 @@ func runLocalizationRewriteNamespace(args []string, stdout, stderr io.Writer) in
 			namespace, _ := history["namespace"].(string)
 			if namespace == *fromNamespace {
 				history["namespace"] = *toNamespace
+				history["flags"] = 0
 				return 1
 			}
 		case "stringtableentry":
 			tableID, _ := history["tableIdName"].(string)
 			if tableID == *fromNamespace {
 				history["tableIdName"] = *toNamespace
+				history["flags"] = 0
 				return 1
 			}
 		}
@@ -513,6 +556,7 @@ func runLocalizationRekey(args []string, stdout, stderr io.Writer) int {
 			ns, _ := history["namespace"].(string)
 			if ns == *namespace {
 				history["key"] = *toKey
+				history["flags"] = 0
 				return 1
 			}
 		case "stringtableentry":
@@ -520,6 +564,7 @@ func runLocalizationRekey(args []string, stdout, stderr io.Writer) int {
 			ns, _ := history["namespace"].(string)
 			if tableID == *namespace || ns == *namespace {
 				history["key"] = *toKey
+				history["flags"] = 0
 				return 1
 			}
 		}
@@ -600,6 +645,7 @@ func runLocalizationSetID(args []string, stdout, stderr io.Writer) int {
 	payload, err := marshalJSONValue(map[string]any{
 		"namespace": *namespace,
 		"key":       *key,
+		"flags":     0,
 	})
 	if err != nil {
 		fmt.Fprintf(stderr, "error: build localization id payload: %v\n", err)
@@ -634,6 +680,7 @@ func runLocalizationSetStringTableRef(args []string, stdout, stderr io.Writer) i
 		"historyType": "StringTableEntry",
 		"tableIdName": *table,
 		"key":         *key,
+		"flags":       0,
 	})
 	if err != nil {
 		fmt.Fprintf(stderr, "error: build localization stringtable payload: %v\n", err)
@@ -674,6 +721,14 @@ func runPathMutationCommand(
 		fmt.Fprintf(stderr, "error: %v\n", err)
 		return 1
 	}
+	if command, _ := extra["command"].(string); command != "" {
+		removeGatherable := command == "set-stringtable-ref" || (command == "set-source" && localizationSnapshotSourceString(result.NewValue) == "")
+		outBytes, err = applyDerivedLocalizationUpdates(outBytes, opts, result.OldValue, result.NewValue, removeGatherable)
+		if err != nil {
+			fmt.Fprintf(stderr, "error: update derived localization data: %v\n", err)
+			return 1
+		}
+	}
 	changed := !bytes.Equal(asset.Raw.Bytes, outBytes)
 
 	resp := map[string]any{
@@ -706,6 +761,192 @@ func runPathMutationCommand(
 	return printJSON(stdout, resp)
 }
 
+func applyDerivedLocalizationUpdates(outBytes []byte, opts uasset.ParseOptions, oldValue, newValue any, removeGatherable bool) ([]byte, error) {
+	updatedAsset, err := uasset.ParseBytes(outBytes, opts)
+	if err != nil {
+		return nil, fmt.Errorf("reparse localization mutation: %w", err)
+	}
+	if mutator := buildLocalizationHistoryMutator(oldValue, newValue); mutator != nil {
+		nextBytes, _, warnings, err := applyLocalizationBulkTextRewrite(updatedAsset, opts, mutator)
+		if err != nil {
+			return nil, fmt.Errorf("rewrite derived localization data: %w", err)
+		}
+		if len(warnings) > 0 {
+			return nil, fmt.Errorf("rewrite derived localization warnings: %s", strings.Join(warnings, "; "))
+		}
+		outBytes = nextBytes
+	}
+	if !removeGatherable {
+		return outBytes, nil
+	}
+
+	updatedAsset, err = uasset.ParseBytes(outBytes, opts)
+	if err != nil {
+		return nil, fmt.Errorf("reparse gatherable localization removal target: %w", err)
+	}
+	outBytes, err = removeMatchingGatherableLocalization(updatedAsset, oldValue, newValue)
+	if err != nil {
+		return nil, fmt.Errorf("remove replaced gatherable localization: %w", err)
+	}
+	updatedAsset, err = uasset.ParseBytes(outBytes, opts)
+	if err != nil {
+		return nil, fmt.Errorf("reparse gatherable localization removal: %w", err)
+	}
+	if updatedAsset.Summary.GatherableTextDataCount == 0 && (updatedAsset.Summary.PackageFlags&packageFlagRequiresLoc) != 0 {
+		outBytes, _, err = rewritePackageFlags(updatedAsset, updatedAsset.Summary.PackageFlags&^packageFlagRequiresLoc)
+		if err != nil {
+			return nil, fmt.Errorf("clear localization gather package flag: %w", err)
+		}
+	}
+	return outBytes, nil
+}
+
+func buildLocalizationHistoryMutator(oldValue, newValue any) func(history map[string]any) int {
+	oldMap, okOld := oldValue.(map[string]any)
+	newMap, okNew := newValue.(map[string]any)
+	if !okOld || !okNew {
+		return nil
+	}
+	return func(history map[string]any) int {
+		if !matchesLocalizationHistorySnapshot(history, oldMap) {
+			return 0
+		}
+		applyLocalizationHistorySnapshot(history, newMap)
+		return 1
+	}
+}
+
+func matchesLocalizationHistorySnapshot(history, snapshot map[string]any) bool {
+	if history == nil || snapshot == nil {
+		return false
+	}
+	oldType := strings.TrimSpace(fmt.Sprint(snapshot["historyType"]))
+	nextType := strings.TrimSpace(fmt.Sprint(history["historyType"]))
+	if oldType != "" && !strings.EqualFold(oldType, nextType) {
+		return false
+	}
+
+	switch strings.ToLower(oldType) {
+	case "stringtableentry":
+		if strings.TrimSpace(fmt.Sprint(snapshot["tableIdName"])) != strings.TrimSpace(fmt.Sprint(history["tableIdName"])) {
+			return false
+		}
+		if strings.TrimSpace(fmt.Sprint(snapshot["key"])) != strings.TrimSpace(fmt.Sprint(history["key"])) {
+			return false
+		}
+		return true
+	default:
+		if strings.TrimSpace(fmt.Sprint(snapshot["namespace"])) != strings.TrimSpace(fmt.Sprint(history["namespace"])) {
+			return false
+		}
+		if strings.TrimSpace(fmt.Sprint(snapshot["key"])) != strings.TrimSpace(fmt.Sprint(history["key"])) {
+			return false
+		}
+		if strings.TrimSpace(fmt.Sprint(snapshot["sourceString"])) != strings.TrimSpace(fmt.Sprint(history["sourceString"])) {
+			return false
+		}
+		return true
+	}
+}
+
+func applyLocalizationHistorySnapshot(history, snapshot map[string]any) {
+	if history == nil || snapshot == nil {
+		return
+	}
+	keys := []string{
+		"cultureInvariantString",
+		"flags",
+		"historyType",
+		"historyTypeCode",
+		"key",
+		"namespace",
+		"sourceString",
+		"tableId",
+		"tableIdName",
+		"value",
+	}
+	for _, key := range keys {
+		if value, ok := snapshot[key]; ok {
+			history[key] = value
+			continue
+		}
+		delete(history, key)
+	}
+}
+
+func removeMatchingGatherableLocalization(asset *uasset.Asset, snapshots ...any) ([]byte, error) {
+	namespaceSet := map[string]struct{}{}
+	keySet := map[string]struct{}{}
+	sourceSet := map[string]struct{}{}
+	for _, snapshot := range snapshots {
+		m, ok := snapshot.(map[string]any)
+		if !ok {
+			continue
+		}
+		if ns := strings.TrimSpace(fmt.Sprint(m["namespace"])); ns != "" {
+			namespaceSet[ns] = struct{}{}
+		}
+		if key := strings.TrimSpace(fmt.Sprint(m["key"])); key != "" {
+			keySet[key] = struct{}{}
+		}
+		if source := strings.TrimSpace(fmt.Sprint(m["sourceString"])); source != "" || source == "" {
+			sourceSet[source] = struct{}{}
+		}
+	}
+	if len(namespaceSet) == 0 || len(keySet) == 0 {
+		return append([]byte(nil), asset.Raw.Bytes...), nil
+	}
+	return rewriteStringTableGatherableData(asset, func(entries []gatherableTextDataEntry) ([]gatherableTextDataEntry, bool, error) {
+		next := make([]gatherableTextDataEntry, 0, len(entries))
+		changed := false
+		for _, entry := range entries {
+			if _, ok := namespaceSet[entry.NamespaceName]; !ok {
+				next = append(next, entry)
+				continue
+			}
+			remaining := make([]gatherableTextSourceSiteContext, 0, len(entry.SourceSiteContexts))
+			for _, ctx := range entry.SourceSiteContexts {
+				if _, keyOK := keySet[ctx.KeyName]; keyOK {
+					if len(sourceSet) == 0 {
+						changed = true
+						continue
+					}
+					if _, sourceOK := sourceSet[entry.SourceString]; sourceOK {
+						changed = true
+						continue
+					}
+				}
+				if len(sourceSet) == 1 {
+					if _, hasEmpty := sourceSet[""]; hasEmpty && len(entry.SourceSiteContexts) == 1 {
+						if _, keyOK := keySet[ctx.KeyName]; keyOK {
+							changed = true
+							continue
+						}
+					}
+				}
+				remaining = append(remaining, ctx)
+			}
+			if len(remaining) == 0 {
+				if len(entry.SourceSiteContexts) != 0 {
+					changed = true
+				}
+				continue
+			}
+			entry.SourceSiteContexts = remaining
+			next = append(next, entry)
+		}
+		return next, changed, nil
+	})
+}
+
+func localizationSnapshotSourceString(snapshot any) string {
+	m, ok := snapshot.(map[string]any)
+	if !ok {
+		return ""
+	}
+	return strings.TrimSpace(fmt.Sprint(m["sourceString"]))
+}
+
 const maxStringTableSerializedEntries = 1_000_000
 
 type stringTableSerializedEntry struct {
@@ -735,6 +976,29 @@ func applyStringTableEntryUpdate(asset *uasset.Asset, exportIndex int, key, valu
 			oldValue := payload.Entries[i].Value
 			payload.Entries[i].Value = value
 			outBytes, err := rewriteStringTableSerializedPayload(asset, exportIndex, payload)
+			if err != nil {
+				return nil, nil, err
+			}
+			updatedAsset, err := uasset.ParseBytes(outBytes, uasset.DefaultParseOptions())
+			if err != nil {
+				return nil, nil, fmt.Errorf("reparse stringtable payload rewrite: %w", err)
+			}
+			outBytes, err = rewriteStringTableGatherableData(updatedAsset, func(entries []gatherableTextDataEntry) ([]gatherableTextDataEntry, bool, error) {
+				changed := false
+				for i := range entries {
+					for _, ctx := range entries[i].SourceSiteContexts {
+						if ctx.KeyName != key {
+							continue
+						}
+						if entries[i].SourceString != value {
+							entries[i].SourceString = value
+							changed = true
+						}
+						break
+					}
+				}
+				return entries, changed, nil
+			})
 			if err != nil {
 				return nil, nil, err
 			}
@@ -789,6 +1053,37 @@ func applyStringTableEntryRemove(asset *uasset.Asset, exportIndex int, key strin
 		if err != nil {
 			return nil, nil, err
 		}
+		updatedAsset, err := uasset.ParseBytes(outBytes, uasset.DefaultParseOptions())
+		if err != nil {
+			return nil, nil, fmt.Errorf("reparse stringtable payload rewrite: %w", err)
+		}
+		outBytes, err = rewriteStringTableGatherableData(updatedAsset, func(entries []gatherableTextDataEntry) ([]gatherableTextDataEntry, bool, error) {
+			next := make([]gatherableTextDataEntry, 0, len(entries))
+			changed := false
+			for _, entry := range entries {
+				remainingContexts := make([]gatherableTextSourceSiteContext, 0, len(entry.SourceSiteContexts))
+				removedAny := false
+				for _, ctx := range entry.SourceSiteContexts {
+					if ctx.KeyName == key {
+						removedAny = true
+						changed = true
+						continue
+					}
+					remainingContexts = append(remainingContexts, ctx)
+				}
+				if removedAny {
+					if len(remainingContexts) == 0 {
+						continue
+					}
+					entry.SourceSiteContexts = remainingContexts
+				}
+				next = append(next, entry)
+			}
+			return next, changed, nil
+		})
+		if err != nil {
+			return nil, nil, err
+		}
 		return outBytes, map[string]any{
 			"removedValue": removed,
 			"entryCount":   len(filtered),
@@ -808,6 +1103,24 @@ func applyStringTableNamespaceUpdate(asset *uasset.Asset, exportIndex int, names
 		oldNamespace := payload.Namespace
 		payload.Namespace = namespace
 		outBytes, err := rewriteStringTableSerializedPayload(asset, exportIndex, payload)
+		if err != nil {
+			return nil, "", err
+		}
+		updatedAsset, err := uasset.ParseBytes(outBytes, uasset.DefaultParseOptions())
+		if err != nil {
+			return nil, "", fmt.Errorf("reparse stringtable payload rewrite: %w", err)
+		}
+		outBytes, err = rewriteStringTableGatherableData(updatedAsset, func(entries []gatherableTextDataEntry) ([]gatherableTextDataEntry, bool, error) {
+			changed := false
+			for i := range entries {
+				if entries[i].NamespaceName == namespace {
+					continue
+				}
+				entries[i].NamespaceName = namespace
+				changed = true
+			}
+			return entries, changed, nil
+		})
 		if err != nil {
 			return nil, "", err
 		}
@@ -1018,12 +1331,190 @@ func appendFStringOrdered(dst []byte, s string, order binary.ByteOrder) []byte {
 	dst = appendInt32Ordered(dst, -int32(len(units)+1), order)
 	for _, unit := range units {
 		buf := make([]byte, 2)
-		order.PutUint16(buf, unit)
+		binary.LittleEndian.PutUint16(buf, unit)
 		dst = append(dst, buf...)
 	}
 	buf := make([]byte, 2)
-	order.PutUint16(buf, 0)
+	binary.LittleEndian.PutUint16(buf, 0)
 	return append(dst, buf...)
+}
+
+func rewriteStringTableGatherableData(
+	asset *uasset.Asset,
+	mutator func([]gatherableTextDataEntry) ([]gatherableTextDataEntry, bool, error),
+) ([]byte, error) {
+	if asset == nil {
+		return nil, fmt.Errorf("asset is nil")
+	}
+	if asset.Summary.GatherableTextDataCount <= 0 || asset.Summary.GatherableTextDataOffset <= 0 {
+		return append([]byte(nil), asset.Raw.Bytes...), nil
+	}
+	if mutator == nil {
+		return append([]byte(nil), asset.Raw.Bytes...), nil
+	}
+
+	oldSection, sectionStart, sectionEnd, present := sectionByOffset(asset, int64(asset.Summary.GatherableTextDataOffset))
+	if !present {
+		return nil, fmt.Errorf(
+			"gatherable text data section is not present (count=%d, offset=%d)",
+			asset.Summary.GatherableTextDataCount,
+			asset.Summary.GatherableTextDataOffset,
+		)
+	}
+	entries, warnings := parseGatherableTextDataSection(asset)
+	if len(warnings) > 0 {
+		return nil, fmt.Errorf("cannot safely rewrite gatherable text data: %s", strings.Join(warnings, "; "))
+	}
+	nextEntries, changed, err := mutator(entries)
+	if err != nil {
+		return nil, err
+	}
+	nextEntries = coalesceGatherableTextDataEntries(nextEntries)
+	if !changed {
+		return append([]byte(nil), asset.Raw.Bytes...), nil
+	}
+
+	newSection, err := encodeGatherableTextDataSection(nextEntries, packageByteOrder(asset))
+	if err != nil {
+		return nil, fmt.Errorf("encode gatherable text data section: %w", err)
+	}
+	if bytes.Equal(oldSection, newSection) && int32(len(nextEntries)) == asset.Summary.GatherableTextDataCount {
+		return append([]byte(nil), asset.Raw.Bytes...), nil
+	}
+
+	outBytes, err := edit.RewriteRawRange(asset, sectionStart, sectionEnd, newSection)
+	if err != nil {
+		return nil, fmt.Errorf("rewrite gatherable text data section: %w", err)
+	}
+	if int32(len(nextEntries)) == asset.Summary.GatherableTextDataCount {
+		return outBytes, nil
+	}
+	if err := patchGatherableTextDataCount(outBytes, asset, int32(len(nextEntries))); err != nil {
+		return nil, err
+	}
+	if err := edit.FinalizePackageBytes(outBytes, asset.Summary.FileVersionUE5); err != nil {
+		return nil, fmt.Errorf("finalize gatherable text data count patch: %w", err)
+	}
+	return outBytes, nil
+}
+
+func coalesceGatherableTextDataEntries(entries []gatherableTextDataEntry) []gatherableTextDataEntry {
+	if len(entries) < 2 {
+		return entries
+	}
+	out := make([]gatherableTextDataEntry, 0, len(entries))
+	for _, entry := range entries {
+		merged := false
+		for i := range out {
+			if out[i].NamespaceName != entry.NamespaceName {
+				continue
+			}
+			if out[i].SourceString != entry.SourceString {
+				continue
+			}
+			if !reflect.DeepEqual(out[i].SourceStringMeta, entry.SourceStringMeta) {
+				continue
+			}
+			out[i].SourceSiteContexts = append(out[i].SourceSiteContexts, entry.SourceSiteContexts...)
+			merged = true
+			break
+		}
+		if !merged {
+			out = append(out, entry)
+		}
+	}
+	return out
+}
+
+func patchGatherableTextDataCount(raw []byte, asset *uasset.Asset, count int32) error {
+	if asset == nil {
+		return fmt.Errorf("asset is nil")
+	}
+	order, byteSwap, err := detectPackageByteOrder(raw)
+	if err != nil {
+		return err
+	}
+	r := uasset.NewByteReaderWithByteSwapping(raw, byteSwap)
+	if _, err := r.ReadInt32(); err != nil {
+		return err
+	}
+	legacyVersion, err := r.ReadInt32()
+	if err != nil {
+		return err
+	}
+	if legacyVersion != -4 {
+		if _, err := r.ReadInt32(); err != nil {
+			return err
+		}
+	}
+	fileUE4, err := r.ReadInt32()
+	if err != nil {
+		return err
+	}
+	fileUE5, err := r.ReadInt32()
+	if err != nil {
+		return err
+	}
+	fileLicensee, err := r.ReadInt32()
+	if err != nil {
+		return err
+	}
+	if fileUE4 == 0 && fileUE5 == 0 && fileLicensee == 0 {
+		fileUE5 = asset.Summary.FileVersionUE5
+	}
+	if fileUE5 >= ue5PackageSavedHash {
+		if err := r.Skip(20); err != nil {
+			return err
+		}
+		if _, err := r.ReadInt32(); err != nil {
+			return err
+		}
+	}
+	if legacyVersion <= -2 {
+		if err := skipSummaryCustomVersionsForRewrite(r, legacyVersion); err != nil {
+			return err
+		}
+	}
+	if fileUE5 < ue5PackageSavedHash {
+		if _, err := r.ReadInt32(); err != nil {
+			return err
+		}
+	}
+	if _, err := r.ReadFString(); err != nil {
+		return err
+	}
+	packageFlags, err := r.ReadUint32()
+	if err != nil {
+		return err
+	}
+	if _, err := r.ReadInt32(); err != nil {
+		return err
+	}
+	if _, err := r.ReadInt32(); err != nil {
+		return err
+	}
+	if asset.Summary.SupportsSoftObjectPathListInSummary() {
+		if _, err := r.ReadInt32(); err != nil {
+			return err
+		}
+		if _, err := r.ReadInt32(); err != nil {
+			return err
+		}
+	}
+	if packageFlags&packageFlagFilterEditorOnly == 0 {
+		if _, err := r.ReadFString(); err != nil {
+			return err
+		}
+	}
+	countPos := r.Offset()
+	if _, err := r.ReadInt32(); err != nil {
+		return err
+	}
+	if countPos < 0 || countPos+4 > len(raw) {
+		return fmt.Errorf("gatherable text data count position out of bounds")
+	}
+	order.PutUint32(raw[countPos:countPos+4], uint32(count))
+	return nil
 }
 
 func applyLocalizationBulkTextRewrite(asset *uasset.Asset, opts uasset.ParseOptions, mutator func(history map[string]any) int) ([]byte, int, []string, error) {
@@ -1033,12 +1524,18 @@ func applyLocalizationBulkTextRewrite(asset *uasset.Asset, opts uasset.ParseOpti
 
 	workingAsset := asset
 	workingBytes := append([]byte(nil), asset.Raw.Bytes...)
-	warnings := make([]string, 0, 8)
 	changeCount := 0
 
 	for exportIdx := 0; exportIdx < len(workingAsset.Exports); exportIdx++ {
 		for {
 			props := workingAsset.ParseExportProperties(exportIdx)
+			if len(props.Warnings) > 0 {
+				return nil, 0, nil, fmt.Errorf(
+					"cannot safely rewrite localization in export %d: %s",
+					exportIdx+1,
+					strings.Join(props.Warnings, "; "),
+				)
+			}
 			mutated := false
 			for _, p := range props.Properties {
 				propName := p.Name.Display(workingAsset.Names)
@@ -1057,13 +1554,11 @@ func applyLocalizationBulkTextRewrite(asset *uasset.Asset, opts uasset.ParseOpti
 
 				valueJSON, err := marshalJSONValue(updated)
 				if err != nil {
-					warnings = append(warnings, fmt.Sprintf("export %d %s: marshal rewritten value: %v", exportIdx+1, propName, err))
-					continue
+					return nil, 0, nil, fmt.Errorf("export %d %s: marshal rewritten value: %w", exportIdx+1, propName, err)
 				}
 				result, err := edit.BuildPropertySetMutation(workingAsset, exportIdx, propName, valueJSON)
 				if err != nil {
-					warnings = append(warnings, fmt.Sprintf("export %d %s: %v", exportIdx+1, propName, err))
-					continue
+					return nil, 0, nil, fmt.Errorf("export %d %s: %w", exportIdx+1, propName, err)
 				}
 
 				workingBytes, err = edit.RewriteAsset(workingAsset, []edit.ExportMutation{result.Mutation})
@@ -1089,16 +1584,28 @@ func applyLocalizationBulkTextRewrite(asset *uasset.Asset, opts uasset.ParseOpti
 	if err != nil {
 		return nil, 0, nil, err
 	}
-	warnings = append(warnings, gatherableWarnings...)
+	if len(gatherableWarnings) > 0 {
+		return nil, 0, nil, fmt.Errorf("cannot safely rewrite gatherable text data: %s", strings.Join(gatherableWarnings, "; "))
+	}
 	changeCount += gatherableCount
 	if !bytes.Equal(gatherableBytes, workingBytes) {
 		workingBytes = gatherableBytes
-		if _, err := uasset.ParseBytes(workingBytes, opts); err != nil {
+		workingAsset, err = uasset.ParseBytes(workingBytes, opts)
+		if err != nil {
 			return nil, 0, nil, fmt.Errorf("reparse rewritten asset (gatherable text data): %w", err)
 		}
 	}
 
-	return workingBytes, changeCount, warnings, nil
+	assetRegistryBytes, assetRegistryCount, err := rewriteAssetRegistryTextValuesWithDependencyOffset(workingAsset, mutator, 0, false)
+	if err != nil {
+		return nil, 0, nil, fmt.Errorf("rewrite asset registry text values: %w", err)
+	}
+	changeCount += assetRegistryCount
+	if !bytes.Equal(assetRegistryBytes, workingBytes) {
+		workingBytes = assetRegistryBytes
+	}
+
+	return workingBytes, changeCount, nil, nil
 }
 
 func applyGatherableLocalizationBulkRewrite(asset *uasset.Asset, mutator func(history map[string]any) int) ([]byte, int, []string, error) {

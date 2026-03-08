@@ -3,7 +3,6 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
-	"path/filepath"
 	"testing"
 
 	"github.com/wilddogjp/openbpx/pkg/uasset"
@@ -56,7 +55,7 @@ func TestSplitNodePinToken(t *testing.T) {
 }
 
 func TestBuildBlueprintGraphIndexParsesPinsFromFixture(t *testing.T) {
-	fixture := filepath.Join("..", "..", "testdata", "golden", "parse", "BP_Empty.uasset")
+	fixture := goldenParseFixturePath(t, "BP_Empty.uasset")
 	asset, err := uasset.ParseFile(fixture, uasset.ParseOptions{})
 	if err != nil {
 		t.Fatalf("parse fixture: %v", err)
@@ -75,7 +74,7 @@ func TestBuildBlueprintGraphIndexParsesPinsFromFixture(t *testing.T) {
 }
 
 func TestRunBlueprintSearchRejectsUnsupportedShowField(t *testing.T) {
-	fixture := filepath.Join("..", "..", "testdata", "golden", "parse", "BP_Empty.uasset")
+	fixture := goldenParseFixturePath(t, "BP_Empty.uasset")
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	code := Run([]string{"blueprint", "search", fixture, "--show", "NodePos,BadField"}, &stdout, &stderr)
@@ -88,7 +87,7 @@ func TestRunBlueprintSearchRejectsUnsupportedShowField(t *testing.T) {
 }
 
 func TestRunBlueprintCallArgsNoMatchOnFixture(t *testing.T) {
-	fixture := filepath.Join("..", "..", "testdata", "golden", "parse", "BP_Empty.uasset")
+	fixture := goldenParseFixturePath(t, "BP_Empty.uasset")
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	code := Run([]string{"blueprint", "call-args", fixture, "--member", "OpenLevelBySoftObjectPtr"}, &stdout, &stderr)

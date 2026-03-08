@@ -5,75 +5,40 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/go-1.21+-00ADD8.svg)](https://go.dev/)
 
-`BPX` is a Go CLI for reading and safely editing Unreal Engine package assets (`.uasset`, `.umap`) without launching Unreal Editor.
+**A safety-first CLI for reading and editing Unreal package assets (`.uasset`, `.umap`) without launching Unreal Editor.**
 
-It is designed for automation and scripting use-cases where binary safety matters: unknown bytes are preserved, no-op round-trip stays byte-identical, and unsupported/high-risk operations fail explicitly.
+`BPX` is designed for automation and scripting workflows where binary safety matters: unknown bytes are preserved, no-op round-trip stays byte-identical, and unsupported/high-risk operations fail explicitly.
 
 BPX runs on **Windows**, **macOS**, and **Linux**.
 
-## Project Status
-
-- Phase: **Alpha**
-- Supported UE window: **UE 5.0 to UE 5.6** (`FileVersionUE5=1000..1017`)
-- Supported platforms: **Windows / macOS / Linux** (`amd64`, `arm64`)
-- Core principles: **unknown-byte preservation**, **round-trip fidelity**, **safety-first editing**, **UE behavior-grounded implementation**
-
-## Install
-
-### CLI (`bpx`)
-
-#### From package managers
-
 ```bash
-# macOS (Homebrew formula hosted in this repository)
-brew install --formula https://raw.githubusercontent.com/wilddogjp/openbpx/main/packaging/homebrew/openbpx.rb
-
-# Debian / Ubuntu (dpkg from GitHub Releases)
-ARCH="$(dpkg --print-architecture)" && TAG="$(basename "$(curl -fsSL -o /dev/null -w '%{url_effective}' https://github.com/wilddogjp/openbpx/releases/latest)")" && VER="${TAG#v}" && DEB="/tmp/openbpx_${VER}_${ARCH}.deb" && curl -fsSL -o "${DEB}" "https://github.com/wilddogjp/openbpx/releases/download/${TAG}/openbpx_${VER}_${ARCH}.deb" && sudo dpkg -i "${DEB}"
-
 # Windows
 winget install --id WilddogJP.OpenBPX --exact
+
+# Debian / Ubuntu (WSL)
+curl -fsSL https://raw.githubusercontent.com/wilddogjp/openbpx/main/scripts/install-bpx-from-release.sh | bash
+
+# macOS
+HOMEBREW_DEVELOPER=1 brew install --formula https://raw.githubusercontent.com/wilddogjp/openbpx/main/packaging/homebrew/openbpx.rb
 ```
 
-#### From source with `go install`
+> [!IMPORTANT]
+> This project is under active development. Expect breaking changes as we march toward v1.0.
 
-```bash
-go install github.com/wilddogjp/openbpx/cmd/bpx@latest
-```
+## Contents
 
-#### Build locally
-
-```bash
-git clone https://github.com/wilddogjp/openbpx.git
-cd openbpx
-go build ./cmd/bpx
-```
-
-Official release artifacts are published on [GitHub Releases](https://github.com/wilddogjp/openbpx/releases).
-
-### Install BPX skill for Codex
-
-```bash
-python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py \
-  --repo wilddogjp/openbpx \
-  --path skills/bpx \
-  --method git
-```
-
-After installation, restart Codex. Ensure `bpx` is available on `PATH` before using the skill.
-
-### Install BPX plugin for Claude Code
-
-```bash
-git clone https://github.com/wilddogjp/openbpx.git
-cd openbpx
-
-claude --plugin-dir .
-```
-
-Ensure `bpx` is available on `PATH` before using the plugin skill.
-
-Use the skill in Claude prompts as `/openbpx:bpx`.
+- [Quick Start](#quick-start)
+- [Why OpenBPX?](#why-openbpx)
+- [Install](#install)
+- [AI Agent Skills](#ai-agent-skills)
+- [Safety and Security Model](#safety-and-security-model)
+- [Supported Scope](#supported-scope)
+- [How It Works](#how-it-works)
+- [Documentation](#documentation)
+- [Contributing](#contributing)
+- [Changelog](#changelog)
+- [License](#license)
+- [About Wild Dog](#about-wild-dog)
 
 ## Quick Start
 
@@ -94,11 +59,71 @@ bpx prop set ./Sample.uasset --export 1 --path "MyValue" --value '123' --dry-run
 bpx prop set ./Sample.uasset --export 1 --path "MyValue" --value '123' --backup
 ```
 
+## Why OpenBPX?
+
+**For humans**: inspect package metadata, exports/imports, properties, DataTables, and Blueprint data from a single CLI.
+
+**For automation and AI agents**: use structured output (`json`/`toml`) and deterministic safety-first write flows (`--dry-run`, `--backup`, `validate`).
+
+### Project Status
+
+- Phase: **Alpha**
+- Supported UE window: **UE 5.0 to UE 5.7** (`FileVersionUE5=1000..1018`)
+- Supported platforms: **Windows / macOS / Linux** (`amd64`, `arm64`)
+- Core principles: **unknown-byte preservation**, **round-trip fidelity**, **safety-first editing**, **UE behavior-grounded implementation**
+
+## Install
+
+### CLI (`bpx`)
+
+#### From package managers
+
+```bash
+# Windows
+winget install --id WilddogJP.OpenBPX --exact
+
+# Debian / Ubuntu (one-command installer with checksum verification) / WSL
+curl -fsSL https://raw.githubusercontent.com/wilddogjp/openbpx/main/scripts/install-bpx-from-release.sh | bash
+
+# macOS (Homebrew formula hosted in this repository)
+# Homebrew blocks URL/path formula install by default, so enable developer mode for this command.
+HOMEBREW_DEVELOPER=1 brew install --formula https://raw.githubusercontent.com/wilddogjp/openbpx/main/packaging/homebrew/openbpx.rb
+```
+
+#### Build locally
+
+```bash
+git clone https://github.com/wilddogjp/openbpx.git
+cd openbpx
+go build ./cmd/bpx
+```
+
+Official release artifacts are published on [GitHub Releases](https://github.com/wilddogjp/openbpx/releases).
+
+## AI Agent Skills
+
+### Generate SKILL.md files from installed `bpx` (recommended)
+
+```bash
+# Generate all command Codex skills to .codex/skills
+bpx generate-skills --output-dir .codex/skills
+
+# Generate all command Claude skills to .claude/skills
+bpx generate-skills --output-dir .claude/skills
+```
+
+Generated layout:
+
+- `skills/bpx-shared/SKILL.md`
+- `skills/bpx-<command>/SKILL.md`
+
+`bpx generate-skills` uses built-in command help metadata and built-in command-profile supplements baked into the binary, so generation works from a single binary without reading repository files.
+
 ## Safety and Security Model
 
 - Preserve bytes that BPX does not interpret.
 - Keep `read -> no edit -> write` byte-identical.
-- Reject unsupported UE versions outside `1000..1017`.
+- Reject unsupported UE versions outside `1000..1018`.
 - Fail explicitly for unsupported/high-risk structural rewrites.
 - Treat all input assets as untrusted binary input.
 
@@ -108,7 +133,7 @@ See [SECURITY.md](SECURITY.md) for vulnerability reporting and response policy.
 
 | Item | Current Support |
 |---|---|
-| UE version window | `FileVersionUE5=1000..1017` (UE 5.0 to 5.6) |
+| UE version window | `FileVersionUE5=1000..1018` (UE 5.0 to 5.7) |
 | Asset files | `.uasset`, `.umap` |
 | Read/inspect commands | Implemented (see [docs/commands.md](docs/commands.md)) |
 | Scoped update commands | Implemented (safety-constrained) |

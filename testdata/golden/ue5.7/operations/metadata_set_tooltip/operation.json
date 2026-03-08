@@ -1,0 +1,13 @@
+{
+	"command": "metadata set-root",
+	"args":
+	{
+		"export": 1,
+		"key": "ToolTip",
+		"value": "Updated"
+	},
+	"ue_procedure": "Attempt root tooltip metadata update",
+	"expect": "error_equal",
+	"error_contains": "no editable path matched",
+	"notes": "Fixture now asserts explicit rejection with byte-identical output."
+}

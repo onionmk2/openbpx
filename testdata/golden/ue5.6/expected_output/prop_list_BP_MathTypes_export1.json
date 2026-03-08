@@ -1,0 +1,1169 @@
+{
+  "argv": [
+    "prop",
+    "list",
+    "testdata/golden/parse/BP_MathTypes.uasset",
+    "--export",
+    "1"
+  ],
+  "expected": {
+    "className": "Blueprint",
+    "decoded": true,
+    "export": 1,
+    "file": "testdata/golden/parse/BP_MathTypes.uasset",
+    "objectName": "BP_MathTypes",
+    "properties": [
+      {
+        "arrayIndex": 0,
+        "flags": 0,
+        "name": "ParentClass",
+        "offset": 21158,
+        "size": 4,
+        "type": "ObjectProperty",
+        "value": {
+          "index": -6,
+          "resolved": "import:6:Actor"
+        },
+        "valueOffset": 21183
+      },
+      {
+        "arrayIndex": 0,
+        "flags": 0,
+        "name": "BlueprintSystemVersion",
+        "offset": 21187,
+        "size": 4,
+        "type": "IntProperty",
+        "value": 2,
+        "valueOffset": 21212
+      },
+      {
+        "arrayIndex": 0,
+        "flags": 0,
+        "name": "SimpleConstructionScript",
+        "offset": 21216,
+        "size": 4,
+        "type": "ObjectProperty",
+        "value": {
+          "index": 12,
+          "resolved": "export:12:SimpleConstructionScript_0"
+        },
+        "valueOffset": 21241
+      },
+      {
+        "arrayIndex": 0,
+        "flags": 0,
+        "name": "UbergraphPages",
+        "offset": 21245,
+        "size": 8,
+        "type": "ArrayProperty(ObjectProperty)",
+        "value": {
+          "arrayType": "ObjectProperty",
+          "value": [
+            {
+              "type": "ObjectProperty",
+              "value": {
+                "index": 4,
+                "resolved": "export:4:EventGraph"
+              }
+            }
+          ]
+        },
+        "valueOffset": 21282
+      },
+      {
+        "arrayIndex": 0,
+        "flags": 0,
+        "name": "FunctionGraphs",
+        "offset": 21290,
+        "size": 8,
+        "type": "ArrayProperty(ObjectProperty)",
+        "value": {
+          "arrayType": "ObjectProperty",
+          "value": [
+            {
+              "type": "ObjectProperty",
+              "value": {
+                "index": 5,
+                "resolved": "export:5:UserConstructionScript"
+              }
+            }
+          ]
+        },
+        "valueOffset": 21327
+      },
+      {
+        "arrayIndex": 0,
+        "flags": 0,
+        "name": "NewVariables",
+        "offset": 21335,
+        "size": 2203,
+        "type": "ArrayProperty(StructProperty(BPVariableDescription(/Script/Engine)))",
+        "value": {
+          "arrayType": "StructProperty",
+          "value": [
+            {
+              "type": "StructProperty",
+              "value": {
+                "structType": "BPVariableDescription",
+                "value": {
+                  "Category": {
+                    "flags": 0,
+                    "offset": 253,
+                    "type": "TextProperty",
+                    "typeNodes": [
+                      {
+                        "innerCount": 0,
+                        "name": "TextProperty"
+                      }
+                    ],
+                    "value": {
+                      "cultureInvariantString": "Default",
+                      "displayString": "Default",
+                      "flags": 8,
+                      "historyType": "Base",
+                      "historyTypeCode": 0,
+                      "key": "Default",
+                      "namespace": "KismetSchema",
+                      "sourceString": "Default",
+                      "value": "Default"
+                    }
+                  },
+                  "DefaultValue": {
+                    "flags": 0,
+                    "offset": 512,
+                    "type": "StrProperty",
+                    "typeNodes": [
+                      {
+                        "innerCount": 0,
+                        "name": "StrProperty"
+                      }
+                    ],
+                    "value": ""
+                  },
+                  "FriendlyName": {
+                    "flags": 0,
+                    "offset": 216,
+                    "type": "StrProperty",
+                    "typeNodes": [
+                      {
+                        "innerCount": 0,
+                        "name": "StrProperty"
+                      }
+                    ],
+                    "value": "VVector"
+                  },
+                  "MetaDataArray": {
+                    "flags": 0,
+                    "offset": 447,
+                    "type": "ArrayProperty(StructProperty(BPVariableMetaDataEntry(/Script/Engine)))",
+                    "typeNodes": [
+                      {
+                        "innerCount": 1,
+                        "name": "ArrayProperty"
+                      },
+                      {
+                        "innerCount": 1,
+                        "name": "StructProperty"
+                      },
+                      {
+                        "innerCount": 1,
+                        "name": "BPVariableMetaDataEntry"
+                      },
+                      {
+                        "innerCount": 0,
+                        "name": "/Script/Engine"
+                      }
+                    ],
+                    "value": {
+                      "arrayType": "StructProperty",
+                      "value": []
+                    }
+                  },
+                  "PropertyFlags": {
+                    "flags": 0,
+                    "offset": 324,
+                    "type": "UInt64Property",
+                    "typeNodes": [
+                      {
+                        "innerCount": 0,
+                        "name": "UInt64Property"
+                      }
+                    ],
+                    "value": 65541
+                  },
+                  "RepNotifyFunc": {
+                    "flags": 0,
+                    "offset": 357,
+                    "type": "NameProperty",
+                    "typeNodes": [
+                      {
+                        "innerCount": 0,
+                        "name": "NameProperty"
+                      }
+                    ],
+                    "value": {
+                      "index": 71,
+                      "name": "None",
+                      "number": 0
+                    }
+                  },
+                  "ReplicationCondition": {
+                    "flags": 0,
+                    "offset": 390,
+                    "type": "ByteProperty(ELifetimeCondition(/Script/CoreUObject))",
+                    "typeNodes": [
+                      {
+                        "innerCount": 1,
+                        "name": "ByteProperty"
+                      },
+                      {
+                        "innerCount": 1,
+                        "name": "ELifetimeCondition"
+                      },
+                      {
+                        "innerCount": 0,
+                        "name": "/Script/CoreUObject"
+                      }
+                    ],
+                    "value": {
+                      "enumType": "ELifetimeCondition",
+                      "value": "ELifetimeCondition::COND_None"
+                    }
+                  },
+                  "VarGuid": {
+                    "flags": 8,
+                    "offset": 33,
+                    "type": "StructProperty(Guid(/Script/CoreUObject))",
+                    "typeNodes": [
+                      {
+                        "innerCount": 1,
+                        "name": "StructProperty"
+                      },
+                      {
+                        "innerCount": 1,
+                        "name": "Guid"
+                      },
+                      {
+                        "innerCount": 0,
+                        "name": "/Script/CoreUObject"
+                      }
+                    ],
+                    "value": {
+                      "structType": "Guid",
+                      "value": "91bf5327-c211-4b20-9394-6878ee37de4e"
+                    }
+                  },
+                  "VarName": {
+                    "flags": 0,
+                    "offset": 0,
+                    "type": "NameProperty",
+                    "typeNodes": [
+                      {
+                        "innerCount": 0,
+                        "name": "NameProperty"
+                      }
+                    ],
+                    "value": {
+                      "index": 116,
+                      "name": "VVector",
+                      "number": 0
+                    }
+                  },
+                  "VarType": {
+                    "flags": 8,
+                    "offset": 98,
+                    "type": "StructProperty(EdGraphPinType(/Script/Engine))",
+                    "typeNodes": [
+                      {
+                        "innerCount": 1,
+                        "name": "StructProperty"
+                      },
+                      {
+                        "innerCount": 1,
+                        "name": "EdGraphPinType"
+                      },
+                      {
+                        "innerCount": 0,
+                        "name": "/Script/Engine"
+                      }
+                    ],
+                    "value": {
+                      "structType": "EdGraphPinType",
+                      "value": {
+                        "rawBase64": "YgAAAAAAAABHAAAAAAAAAO3///8AAAAAAAAAAAAAAAAARwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                        "structType": "EdGraphPinType"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "type": "StructProperty",
+              "value": {
+                "structType": "BPVariableDescription",
+                "value": {
+                  "Category": {
+                    "flags": 0,
+                    "offset": 254,
+                    "type": "TextProperty",
+                    "typeNodes": [
+                      {
+                        "innerCount": 0,
+                        "name": "TextProperty"
+                      }
+                    ],
+                    "value": {
+                      "cultureInvariantString": "Default",
+                      "displayString": "Default",
+                      "flags": 8,
+                      "historyType": "Base",
+                      "historyTypeCode": 0,
+                      "key": "Default",
+                      "namespace": "KismetSchema",
+                      "sourceString": "Default",
+                      "value": "Default"
+                    }
+                  },
+                  "DefaultValue": {
+                    "flags": 0,
+                    "offset": 513,
+                    "type": "StrProperty",
+                    "typeNodes": [
+                      {
+                        "innerCount": 0,
+                        "name": "StrProperty"
+                      }
+                    ],
+                    "value": ""
+                  },
+                  "FriendlyName": {
+                    "flags": 0,
+                    "offset": 216,
+                    "type": "StrProperty",
+                    "typeNodes": [
+                      {
+                        "innerCount": 0,
+                        "name": "StrProperty"
+                      }
+                    ],
+                    "value": "VRotator"
+                  },
+                  "MetaDataArray": {
+                    "flags": 0,
+                    "offset": 448,
+                    "type": "ArrayProperty(StructProperty(BPVariableMetaDataEntry(/Script/Engine)))",
+                    "typeNodes": [
+                      {
+                        "innerCount": 1,
+                        "name": "ArrayProperty"
+                      },
+                      {
+                        "innerCount": 1,
+                        "name": "StructProperty"
+                      },
+                      {
+                        "innerCount": 1,
+                        "name": "BPVariableMetaDataEntry"
+                      },
+                      {
+                        "innerCount": 0,
+                        "name": "/Script/Engine"
+                      }
+                    ],
+                    "value": {
+                      "arrayType": "StructProperty",
+                      "value": []
+                    }
+                  },
+                  "PropertyFlags": {
+                    "flags": 0,
+                    "offset": 325,
+                    "type": "UInt64Property",
+                    "typeNodes": [
+                      {
+                        "innerCount": 0,
+                        "name": "UInt64Property"
+                      }
+                    ],
+                    "value": 65541
+                  },
+                  "RepNotifyFunc": {
+                    "flags": 0,
+                    "offset": 358,
+                    "type": "NameProperty",
+                    "typeNodes": [
+                      {
+                        "innerCount": 0,
+                        "name": "NameProperty"
+                      }
+                    ],
+                    "value": {
+                      "index": 71,
+                      "name": "None",
+                      "number": 0
+                    }
+                  },
+                  "ReplicationCondition": {
+                    "flags": 0,
+                    "offset": 391,
+                    "type": "ByteProperty(ELifetimeCondition(/Script/CoreUObject))",
+                    "typeNodes": [
+                      {
+                        "innerCount": 1,
+                        "name": "ByteProperty"
+                      },
+                      {
+                        "innerCount": 1,
+                        "name": "ELifetimeCondition"
+                      },
+                      {
+                        "innerCount": 0,
+                        "name": "/Script/CoreUObject"
+                      }
+                    ],
+                    "value": {
+                      "enumType": "ELifetimeCondition",
+                      "value": "ELifetimeCondition::COND_None"
+                    }
+                  },
+                  "VarGuid": {
+                    "flags": 8,
+                    "offset": 33,
+                    "type": "StructProperty(Guid(/Script/CoreUObject))",
+                    "typeNodes": [
+                      {
+                        "innerCount": 1,
+                        "name": "StructProperty"
+                      },
+                      {
+                        "innerCount": 1,
+                        "name": "Guid"
+                      },
+                      {
+                        "innerCount": 0,
+                        "name": "/Script/CoreUObject"
+                      }
+                    ],
+                    "value": {
+                      "structType": "Guid",
+                      "value": "675eed21-8a49-4753-8981-d07243eb89b1"
+                    }
+                  },
+                  "VarName": {
+                    "flags": 0,
+                    "offset": 0,
+                    "type": "NameProperty",
+                    "typeNodes": [
+                      {
+                        "innerCount": 0,
+                        "name": "NameProperty"
+                      }
+                    ],
+                    "value": {
+                      "index": 114,
+                      "name": "VRotator",
+                      "number": 0
+                    }
+                  },
+                  "VarType": {
+                    "flags": 8,
+                    "offset": 98,
+                    "type": "StructProperty(EdGraphPinType(/Script/Engine))",
+                    "typeNodes": [
+                      {
+                        "innerCount": 1,
+                        "name": "StructProperty"
+                      },
+                      {
+                        "innerCount": 1,
+                        "name": "EdGraphPinType"
+                      },
+                      {
+                        "innerCount": 0,
+                        "name": "/Script/Engine"
+                      }
+                    ],
+                    "value": {
+                      "structType": "EdGraphPinType",
+                      "value": {
+                        "rawBase64": "YgAAAAAAAABHAAAAAAAAAO////8AAAAAAAAAAAAAAAAARwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                        "structType": "EdGraphPinType"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "type": "StructProperty",
+              "value": {
+                "structType": "BPVariableDescription",
+                "value": {
+                  "Category": {
+                    "flags": 0,
+                    "offset": 252,
+                    "type": "TextProperty",
+                    "typeNodes": [
+                      {
+                        "innerCount": 0,
+                        "name": "TextProperty"
+                      }
+                    ],
+                    "value": {
+                      "cultureInvariantString": "Default",
+                      "displayString": "Default",
+                      "flags": 8,
+                      "historyType": "Base",
+                      "historyTypeCode": 0,
+                      "key": "Default",
+                      "namespace": "KismetSchema",
+                      "sourceString": "Default",
+                      "value": "Default"
+                    }
+                  },
+                  "DefaultValue": {
+                    "flags": 0,
+                    "offset": 511,
+                    "type": "StrProperty",
+                    "typeNodes": [
+                      {
+                        "innerCount": 0,
+                        "name": "StrProperty"
+                      }
+                    ],
+                    "value": ""
+                  },
+                  "FriendlyName": {
+                    "flags": 0,
+                    "offset": 216,
+                    "type": "StrProperty",
+                    "typeNodes": [
+                      {
+                        "innerCount": 0,
+                        "name": "StrProperty"
+                      }
+                    ],
+                    "value": "VColor"
+                  },
+                  "MetaDataArray": {
+                    "flags": 0,
+                    "offset": 446,
+                    "type": "ArrayProperty(StructProperty(BPVariableMetaDataEntry(/Script/Engine)))",
+                    "typeNodes": [
+                      {
+                        "innerCount": 1,
+                        "name": "ArrayProperty"
+                      },
+                      {
+                        "innerCount": 1,
+                        "name": "StructProperty"
+                      },
+                      {
+                        "innerCount": 1,
+                        "name": "BPVariableMetaDataEntry"
+                      },
+                      {
+                        "innerCount": 0,
+                        "name": "/Script/Engine"
+                      }
+                    ],
+                    "value": {
+                      "arrayType": "StructProperty",
+                      "value": []
+                    }
+                  },
+                  "PropertyFlags": {
+                    "flags": 0,
+                    "offset": 323,
+                    "type": "UInt64Property",
+                    "typeNodes": [
+                      {
+                        "innerCount": 0,
+                        "name": "UInt64Property"
+                      }
+                    ],
+                    "value": 65541
+                  },
+                  "RepNotifyFunc": {
+                    "flags": 0,
+                    "offset": 356,
+                    "type": "NameProperty",
+                    "typeNodes": [
+                      {
+                        "innerCount": 0,
+                        "name": "NameProperty"
+                      }
+                    ],
+                    "value": {
+                      "index": 71,
+                      "name": "None",
+                      "number": 0
+                    }
+                  },
+                  "ReplicationCondition": {
+                    "flags": 0,
+                    "offset": 389,
+                    "type": "ByteProperty(ELifetimeCondition(/Script/CoreUObject))",
+                    "typeNodes": [
+                      {
+                        "innerCount": 1,
+                        "name": "ByteProperty"
+                      },
+                      {
+                        "innerCount": 1,
+                        "name": "ELifetimeCondition"
+                      },
+                      {
+                        "innerCount": 0,
+                        "name": "/Script/CoreUObject"
+                      }
+                    ],
+                    "value": {
+                      "enumType": "ELifetimeCondition",
+                      "value": "ELifetimeCondition::COND_None"
+                    }
+                  },
+                  "VarGuid": {
+                    "flags": 8,
+                    "offset": 33,
+                    "type": "StructProperty(Guid(/Script/CoreUObject))",
+                    "typeNodes": [
+                      {
+                        "innerCount": 1,
+                        "name": "StructProperty"
+                      },
+                      {
+                        "innerCount": 1,
+                        "name": "Guid"
+                      },
+                      {
+                        "innerCount": 0,
+                        "name": "/Script/CoreUObject"
+                      }
+                    ],
+                    "value": {
+                      "structType": "Guid",
+                      "value": "8b627ca0-13e9-4fca-82ad-1fd1d3dbd598"
+                    }
+                  },
+                  "VarName": {
+                    "flags": 0,
+                    "offset": 0,
+                    "type": "NameProperty",
+                    "typeNodes": [
+                      {
+                        "innerCount": 0,
+                        "name": "NameProperty"
+                      }
+                    ],
+                    "value": {
+                      "index": 112,
+                      "name": "VColor",
+                      "number": 0
+                    }
+                  },
+                  "VarType": {
+                    "flags": 8,
+                    "offset": 98,
+                    "type": "StructProperty(EdGraphPinType(/Script/Engine))",
+                    "typeNodes": [
+                      {
+                        "innerCount": 1,
+                        "name": "StructProperty"
+                      },
+                      {
+                        "innerCount": 1,
+                        "name": "EdGraphPinType"
+                      },
+                      {
+                        "innerCount": 0,
+                        "name": "/Script/Engine"
+                      }
+                    ],
+                    "value": {
+                      "structType": "EdGraphPinType",
+                      "value": {
+                        "rawBase64": "YgAAAAAAAABHAAAAAAAAAPD///8AAAAAAAAAAAAAAAAARwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                        "structType": "EdGraphPinType"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "type": "StructProperty",
+              "value": {
+                "structType": "BPVariableDescription",
+                "value": {
+                  "Category": {
+                    "flags": 0,
+                    "offset": 256,
+                    "type": "TextProperty",
+                    "typeNodes": [
+                      {
+                        "innerCount": 0,
+                        "name": "TextProperty"
+                      }
+                    ],
+                    "value": {
+                      "cultureInvariantString": "Default",
+                      "displayString": "Default",
+                      "flags": 8,
+                      "historyType": "Base",
+                      "historyTypeCode": 0,
+                      "key": "Default",
+                      "namespace": "KismetSchema",
+                      "sourceString": "Default",
+                      "value": "Default"
+                    }
+                  },
+                  "DefaultValue": {
+                    "flags": 0,
+                    "offset": 515,
+                    "type": "StrProperty",
+                    "typeNodes": [
+                      {
+                        "innerCount": 0,
+                        "name": "StrProperty"
+                      }
+                    ],
+                    "value": ""
+                  },
+                  "FriendlyName": {
+                    "flags": 0,
+                    "offset": 216,
+                    "type": "StrProperty",
+                    "typeNodes": [
+                      {
+                        "innerCount": 0,
+                        "name": "StrProperty"
+                      }
+                    ],
+                    "value": "VTransform"
+                  },
+                  "MetaDataArray": {
+                    "flags": 0,
+                    "offset": 450,
+                    "type": "ArrayProperty(StructProperty(BPVariableMetaDataEntry(/Script/Engine)))",
+                    "typeNodes": [
+                      {
+                        "innerCount": 1,
+                        "name": "ArrayProperty"
+                      },
+                      {
+                        "innerCount": 1,
+                        "name": "StructProperty"
+                      },
+                      {
+                        "innerCount": 1,
+                        "name": "BPVariableMetaDataEntry"
+                      },
+                      {
+                        "innerCount": 0,
+                        "name": "/Script/Engine"
+                      }
+                    ],
+                    "value": {
+                      "arrayType": "StructProperty",
+                      "value": []
+                    }
+                  },
+                  "PropertyFlags": {
+                    "flags": 0,
+                    "offset": 327,
+                    "type": "UInt64Property",
+                    "typeNodes": [
+                      {
+                        "innerCount": 0,
+                        "name": "UInt64Property"
+                      }
+                    ],
+                    "value": 65541
+                  },
+                  "RepNotifyFunc": {
+                    "flags": 0,
+                    "offset": 360,
+                    "type": "NameProperty",
+                    "typeNodes": [
+                      {
+                        "innerCount": 0,
+                        "name": "NameProperty"
+                      }
+                    ],
+                    "value": {
+                      "index": 71,
+                      "name": "None",
+                      "number": 0
+                    }
+                  },
+                  "ReplicationCondition": {
+                    "flags": 0,
+                    "offset": 393,
+                    "type": "ByteProperty(ELifetimeCondition(/Script/CoreUObject))",
+                    "typeNodes": [
+                      {
+                        "innerCount": 1,
+                        "name": "ByteProperty"
+                      },
+                      {
+                        "innerCount": 1,
+                        "name": "ELifetimeCondition"
+                      },
+                      {
+                        "innerCount": 0,
+                        "name": "/Script/CoreUObject"
+                      }
+                    ],
+                    "value": {
+                      "enumType": "ELifetimeCondition",
+                      "value": "ELifetimeCondition::COND_None"
+                    }
+                  },
+                  "VarGuid": {
+                    "flags": 8,
+                    "offset": 33,
+                    "type": "StructProperty(Guid(/Script/CoreUObject))",
+                    "typeNodes": [
+                      {
+                        "innerCount": 1,
+                        "name": "StructProperty"
+                      },
+                      {
+                        "innerCount": 1,
+                        "name": "Guid"
+                      },
+                      {
+                        "innerCount": 0,
+                        "name": "/Script/CoreUObject"
+                      }
+                    ],
+                    "value": {
+                      "structType": "Guid",
+                      "value": "0864b299-0ca7-441a-a13a-62f447d1fa0b"
+                    }
+                  },
+                  "VarName": {
+                    "flags": 0,
+                    "offset": 0,
+                    "type": "NameProperty",
+                    "typeNodes": [
+                      {
+                        "innerCount": 0,
+                        "name": "NameProperty"
+                      }
+                    ],
+                    "value": {
+                      "index": 115,
+                      "name": "VTransform",
+                      "number": 0
+                    }
+                  },
+                  "VarType": {
+                    "flags": 8,
+                    "offset": 98,
+                    "type": "StructProperty(EdGraphPinType(/Script/Engine))",
+                    "typeNodes": [
+                      {
+                        "innerCount": 1,
+                        "name": "StructProperty"
+                      },
+                      {
+                        "innerCount": 1,
+                        "name": "EdGraphPinType"
+                      },
+                      {
+                        "innerCount": 0,
+                        "name": "/Script/Engine"
+                      }
+                    ],
+                    "value": {
+                      "structType": "EdGraphPinType",
+                      "value": {
+                        "rawBase64": "YgAAAAAAAABHAAAAAAAAAO7///8AAAAAAAAAAAAAAAAARwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                        "structType": "EdGraphPinType"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "valueOffset": 21396
+      },
+      {
+        "arrayIndex": 0,
+        "flags": 0,
+        "name": "LastEditedDocuments",
+        "offset": 23599,
+        "size": 445,
+        "type": "ArrayProperty(StructProperty(EditedDocumentInfo(/Script/Engine)))",
+        "value": {
+          "arrayType": "StructProperty",
+          "value": [
+            {
+              "type": "StructProperty",
+              "value": {
+                "structType": "EditedDocumentInfo",
+                "value": {
+                  "EditedObjectPath": {
+                    "flags": 8,
+                    "offset": 0,
+                    "type": "StructProperty(SoftObjectPath(/Script/CoreUObject))",
+                    "typeNodes": [
+                      {
+                        "innerCount": 1,
+                        "name": "StructProperty"
+                      },
+                      {
+                        "innerCount": 1,
+                        "name": "SoftObjectPath"
+                      },
+                      {
+                        "innerCount": 0,
+                        "name": "/Script/CoreUObject"
+                      }
+                    ],
+                    "value": {
+                      "structType": "SoftObjectPath",
+                      "value": {
+                        "error": "soft object path index 0 out of range",
+                        "softObjectPathIndex": 0
+                      }
+                    }
+                  },
+                  "SavedViewOffset": {
+                    "flags": 8,
+                    "offset": 53,
+                    "type": "StructProperty(DeprecateSlateVector2D(/Script/SlateCore))",
+                    "typeNodes": [
+                      {
+                        "innerCount": 1,
+                        "name": "StructProperty"
+                      },
+                      {
+                        "innerCount": 1,
+                        "name": "DeprecateSlateVector2D"
+                      },
+                      {
+                        "innerCount": 0,
+                        "name": "/Script/SlateCore"
+                      }
+                    ],
+                    "value": {
+                      "structType": "DeprecateSlateVector2D",
+                      "value": {
+                        "rawBase64": "AAAAAAAAAAA=",
+                        "structType": "DeprecateSlateVector2D"
+                      }
+                    }
+                  },
+                  "SavedZoomAmount": {
+                    "flags": 0,
+                    "offset": 110,
+                    "type": "FloatProperty",
+                    "typeNodes": [
+                      {
+                        "innerCount": 0,
+                        "name": "FloatProperty"
+                      }
+                    ],
+                    "value": -1
+                  }
+                }
+              }
+            },
+            {
+              "type": "StructProperty",
+              "value": {
+                "structType": "EditedDocumentInfo",
+                "value": {
+                  "EditedObjectPath": {
+                    "flags": 8,
+                    "offset": 0,
+                    "type": "StructProperty(SoftObjectPath(/Script/CoreUObject))",
+                    "typeNodes": [
+                      {
+                        "innerCount": 1,
+                        "name": "StructProperty"
+                      },
+                      {
+                        "innerCount": 1,
+                        "name": "SoftObjectPath"
+                      },
+                      {
+                        "innerCount": 0,
+                        "name": "/Script/CoreUObject"
+                      }
+                    ],
+                    "value": {
+                      "structType": "SoftObjectPath",
+                      "value": {
+                        "error": "soft object path index 1 out of range",
+                        "softObjectPathIndex": 1
+                      }
+                    }
+                  },
+                  "SavedViewOffset": {
+                    "flags": 8,
+                    "offset": 53,
+                    "type": "StructProperty(DeprecateSlateVector2D(/Script/SlateCore))",
+                    "typeNodes": [
+                      {
+                        "innerCount": 1,
+                        "name": "StructProperty"
+                      },
+                      {
+                        "innerCount": 1,
+                        "name": "DeprecateSlateVector2D"
+                      },
+                      {
+                        "innerCount": 0,
+                        "name": "/Script/SlateCore"
+                      }
+                    ],
+                    "value": {
+                      "structType": "DeprecateSlateVector2D",
+                      "value": {
+                        "rawBase64": "AAAAAAAAAAA=",
+                        "structType": "DeprecateSlateVector2D"
+                      }
+                    }
+                  },
+                  "SavedZoomAmount": {
+                    "flags": 0,
+                    "offset": 110,
+                    "type": "FloatProperty",
+                    "typeNodes": [
+                      {
+                        "innerCount": 0,
+                        "name": "FloatProperty"
+                      }
+                    ],
+                    "value": -1
+                  }
+                }
+              }
+            },
+            {
+              "type": "StructProperty",
+              "value": {
+                "structType": "EditedDocumentInfo",
+                "value": {
+                  "EditedObjectPath": {
+                    "flags": 8,
+                    "offset": 0,
+                    "type": "StructProperty(SoftObjectPath(/Script/CoreUObject))",
+                    "typeNodes": [
+                      {
+                        "innerCount": 1,
+                        "name": "StructProperty"
+                      },
+                      {
+                        "innerCount": 1,
+                        "name": "SoftObjectPath"
+                      },
+                      {
+                        "innerCount": 0,
+                        "name": "/Script/CoreUObject"
+                      }
+                    ],
+                    "value": {
+                      "structType": "SoftObjectPath",
+                      "value": {
+                        "error": "soft object path index 2 out of range",
+                        "softObjectPathIndex": 2
+                      }
+                    }
+                  },
+                  "SavedViewOffset": {
+                    "flags": 8,
+                    "offset": 53,
+                    "type": "StructProperty(DeprecateSlateVector2D(/Script/SlateCore))",
+                    "typeNodes": [
+                      {
+                        "innerCount": 1,
+                        "name": "StructProperty"
+                      },
+                      {
+                        "innerCount": 1,
+                        "name": "DeprecateSlateVector2D"
+                      },
+                      {
+                        "innerCount": 0,
+                        "name": "/Script/SlateCore"
+                      }
+                    ],
+                    "value": {
+                      "structType": "DeprecateSlateVector2D",
+                      "value": {
+                        "rawBase64": "AAAAAAAAAAA=",
+                        "structType": "DeprecateSlateVector2D"
+                      }
+                    }
+                  },
+                  "SavedZoomAmount": {
+                    "flags": 0,
+                    "offset": 110,
+                    "type": "FloatProperty",
+                    "typeNodes": [
+                      {
+                        "innerCount": 0,
+                        "name": "FloatProperty"
+                      }
+                    ],
+                    "value": -1
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "valueOffset": 23660
+      },
+      {
+        "arrayIndex": 0,
+        "flags": 0,
+        "name": "GeneratedClass",
+        "offset": 24105,
+        "size": 4,
+        "type": "ObjectProperty",
+        "value": {
+          "index": 2,
+          "resolved": "export:2:BP_MathTypes_C"
+        },
+        "valueOffset": 24130
+      },
+      {
+        "arrayIndex": 0,
+        "flags": 0,
+        "name": "bLegacyNeedToPurgeSkelRefs",
+        "offset": 24134,
+        "size": 0,
+        "type": "BoolProperty",
+        "value": false,
+        "valueOffset": 24159
+      },
+      {
+        "arrayIndex": 0,
+        "flags": 8,
+        "name": "BlueprintGuid",
+        "offset": 24159,
+        "size": 16,
+        "type": "StructProperty(Guid(/Script/CoreUObject))",
+        "value": {
+          "structType": "Guid",
+          "value": "c86360dd-9b38-49c9-bbaa-d63461718924"
+        },
+        "valueOffset": 24208
+      }
+    ],
+    "warnings": null
+  },
+  "generatedAt": "2026-03-06T17:08:06Z",
+  "generatedBy": "scripts/gen_expected_output",
+  "name": "prop_list_BP_MathTypes_export1",
+  "oracle": "ue-fixture"
+}

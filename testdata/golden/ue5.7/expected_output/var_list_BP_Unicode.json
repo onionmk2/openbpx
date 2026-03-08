@@ -1,0 +1,40 @@
+{
+  "argv": [
+    "var",
+    "list",
+    "testdata/golden/parse/BP_Unicode.uasset"
+  ],
+  "expected": {
+    "cdoExport": 3,
+    "count": 3,
+    "file": "testdata/golden/parse/BP_Unicode.uasset",
+    "variables": [
+      {
+        "default": 100,
+        "mismatch": false,
+        "name": "体力",
+        "source": "merged",
+        "type": "IntProperty"
+      },
+      {
+        "default": 25,
+        "mismatch": false,
+        "name": "攻撃力",
+        "source": "merged",
+        "type": "IntProperty"
+      },
+      {
+        "default": "テストデータ",
+        "mismatch": false,
+        "name": "説明",
+        "source": "merged",
+        "type": "StrProperty"
+      }
+    ],
+    "warnings": []
+  },
+  "generatedAt": "2026-03-06T17:08:06Z",
+  "generatedBy": "scripts/gen_expected_output",
+  "name": "var_list_BP_Unicode",
+  "oracle": "ue-fixture"
+}

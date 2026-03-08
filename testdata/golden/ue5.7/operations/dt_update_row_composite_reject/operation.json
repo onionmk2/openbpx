@@ -1,0 +1,12 @@
+{
+	"command": "datatable update-row",
+	"args":
+	{
+		"row": "Row_A",
+		"values": "{\"Score\":999}"
+	},
+	"ue_procedure": "Reject update-row against CompositeDataTable",
+	"expect": "error_equal",
+	"error_contains": "composite",
+	"notes": "Fixture now asserts explicit rejection with byte-identical output."
+}

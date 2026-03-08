@@ -1,0 +1,13 @@
+{
+	"command": "localization set-stringtable-ref",
+	"args":
+	{
+		"export": 11,
+		"path": "CategoryName",
+		"table": "SimpleConstructionScript",
+		"key": "BTN_OK"
+	},
+	"ue_procedure": "Convert existing TextProperty to StringTable reference",
+	"expect": "byte_equal",
+	"notes": "Existing TextProperty conversion to StringTableEntry form."
+}

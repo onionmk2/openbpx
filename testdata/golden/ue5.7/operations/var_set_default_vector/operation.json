@@ -1,0 +1,11 @@
+{
+	"command": "var set-default",
+	"args":
+	{
+		"name": "VVector",
+		"value": "{\"x\":1,\"y\":2,\"z\":3}"
+	},
+	"ue_procedure": "Update vector variable default value",
+	"expect": "byte_equal",
+	"notes": "Validated on ue5.6/ue5.7 math fixture roots."
+}

@@ -1,0 +1,13 @@
+{
+	"command": "metadata set-object",
+	"args":
+	{
+		"export": "11",
+		"import": "10",
+		"key": "CategoryName",
+		"value": "ゲームプレイ"
+	},
+	"ue_procedure": "Update object metadata fallback path with unicode text",
+	"expect": "byte_equal",
+	"notes": "Covers metadata set-object unicode text rewrite."
+}

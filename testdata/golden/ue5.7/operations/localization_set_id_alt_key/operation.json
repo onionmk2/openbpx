@@ -1,0 +1,13 @@
+{
+	"command": "localization set-id",
+	"args":
+	{
+		"export": "11",
+		"path": "CategoryName",
+		"namespace": "UI",
+		"key": "BTN_CANCEL"
+	},
+	"ue_procedure": "Update existing StringTable-reference TextProperty key",
+	"expect": "byte_equal",
+	"notes": "StringTable-reference localization id rewrite to BTN_CANCEL."
+}

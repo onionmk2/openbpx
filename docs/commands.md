@@ -17,6 +17,7 @@ These are read/validate commands (implemented plus planned additions).
 | Category | `bpx` Command | Status | Notes |
 |---|---|---|---|
 | Meta | `bpx version` | ✅ Implemented | Prints CLI semantic version |
+| Meta | `bpx generate-skills [--output-dir <dir>] [--filter <token>]` | ✅ Implemented | Generates skills from built-in help metadata and merges built-in command-profile supplements baked into the binary |
 | Asset Search | `bpx find assets <directory> [--pattern "*.uasset"] [--recursive]` | ✅ Implemented | `.umap` is also included |
 | Asset Search | `bpx find summary <directory> [--pattern "*.uasset"] [--recursive] [--format json\|toml] [--out <path>]` | ✅ Implemented | Cross-directory summary aggregation (default: `*.uasset`) |
 | Asset Info | `bpx info <file.uasset>` | ✅ Implemented | Basic metadata |
@@ -31,9 +32,9 @@ These are read/validate commands (implemented plus planned additions).
 | Import | `bpx import graph <directory> [--pattern "*.uasset"] [--recursive] [--group-by root\|object] [--filter <token>]` | ✅ Implemented | ImportMap dependency graph aggregation |
 | Package | `bpx package meta <file.uasset>` | ✅ Implemented | GUID/flags/version |
 | Package | `bpx package custom-versions <file.uasset>` | ✅ Implemented | Custom version listing |
-| Package | `bpx package depends <file.uasset>` | ✅ Implemented | DependsMap listing |
+| Package | `bpx package depends <file.uasset> [--reverse]` | ✅ Implemented | DependsMap listing (`--reverse` adds reverse dependency view) |
 | Package | `bpx package resolve-index <file.uasset> --index <i>` | ✅ Implemented | `FPackageIndex` resolution |
-| Package | `bpx package section <file.uasset> --name <section>` | ✅ Implemented | Includes `soft-object-paths` and other raw sections |
+| Package | `bpx package section <file.uasset> --name <section>` | ✅ Implemented | Includes `soft-object-paths`, `import-type-hierarchies`, and other raw sections |
 | Localization | `bpx localization read <file.uasset> [--export <n>] [--include-history] [--format json\|toml\|csv]` | ✅ Implemented | Lists TextProperty + GatherableTextData (`--export` excludes GatherableTextData) |
 | Localization | `bpx localization query <file.uasset> [--export <n>] [--namespace <ns>] [--key <key>] [--text <token>] [--history-type <type>] [--limit <n>]` | ✅ Implemented | Filters by namespace/key/historyType/etc. |
 | Localization | `bpx localization resolve <file.uasset> [--export <n>] --culture <culture> [--locres <path>] [--missing-only]` | ✅ Implemented | Preview resolved display strings via `.locres` |
@@ -52,7 +53,9 @@ These are read/validate commands (implemented plus planned additions).
 | StringTable | `bpx stringtable read <file.uasset>` | ✅ Implemented | String table KV read |
 | Class | `bpx class <file.uasset> --export <n>` | ✅ Implemented | ClassExport read |
 | Level | `bpx level info <file.umap> --export <n>` | ✅ Implemented | LevelExport read |
+| Level | `bpx level actor-search <file.umap> [--name <token>] [--actor-label <token>] [--actor-class <token>] [--limit <n>]` | ✅ Implemented | Searches `PersistentLevel` child exports by actor name/label/class tokens |
 | Level | `bpx level var-list <file.umap> --actor <name\|PersistentLevel.Name\|export-index>` | ✅ Implemented | Resolves placed objects via `OuterIndex -> PersistentLevel` and returns decoded variables |
+| Material | `bpx material read <file.uasset> [--export <n>] [--include-hlsl] [--children-root <directory>] [--parent <token>] [--pattern "*.uasset"] [--recursive] [--limit <n>]` | ✅ Implemented | Unified material read entry (inputs/refs/parent + optional children scan + HLSL summary) |
 | Raw Export | `bpx raw <file.uasset> --export <n>` | ✅ Implemented | Raw payload base64 |
 | Metadata | `bpx metadata <file.uasset> --export <n>` | ✅ Implemented | MetaDataExport read |
 | Struct Export | `bpx struct details <file.uasset> --export <n>` | ✅ Implemented | StructExport details |
@@ -78,8 +81,8 @@ Common write-command behavior:
 | Save | `bpx write <file.uasset> --out <new.uasset>` | ✅ Implemented | Low | Recomputes summary offsets and `Export.SerialOffset` after payload relocation |
 | Variable | `bpx var list <file.uasset>` | ✅ Implemented | Low | Uses CDO defaults and returns `source`/`mismatch`; merges declaration names even when `NewVariables` appears as `rawBase64` |
 | Variable | `bpx var set-default <file.uasset> --name <var> --value '<json>'` | ✅ Implemented | Low | Uses same write engine as `prop set`; type mismatch returns error |
-| NameMap | `bpx name set <file.uasset> --index <n> --value <name> [--non-case-hash <u16>] [--case-preserving-hash <u16>]` | ✅ Implemented | Medium | Updates existing index value/hash; computes UE5.6-compatible hashes when omitted |
-| Level | `bpx level var-set <file.umap> --actor <name\|PersistentLevel.Name\|export-index> --path <dot.path> --value '<json>'` | ✅ Implemented | Low | Uses same write engine as `prop set`; actor resolution via `OuterIndex -> PersistentLevel` |
+| NameMap | `bpx name set <file.uasset> --index <n> --value <name> [--non-case-hash <u16>] [--case-preserving-hash <u16>]` | ✅ Implemented | Medium | Updates existing index value/hash; computes UE5-compatible hashes when omitted |
+| Level | `bpx level var-set <file.umap> --actor <name\|PersistentLevel.Name\|export-index> --path <dot.path> --value '<json>'` | ✅ Implemented | Low | Uses same write engine as `prop set`; actor resolution via `OuterIndex -> PersistentLevel`; `NavigationSystemConfig` is explicitly rejected because UE save also compacts related import/export/name state |
 | Enum | `bpx enum write-value <file.uasset> --export <n> --name <k> --value <v>` | ✅ Implemented | Medium | Existing enum values only |
 | StringTable | `bpx stringtable write-entry <file.uasset> --export <n> --key <k> --value <v>` | ✅ Implemented | Medium | Existing key update only |
 | Localization | `bpx localization set-source <file.uasset> --export <n> --path <dot.path> --value <text>` | ✅ Implemented | Low | Existing TextProperty source-string update |
@@ -159,7 +162,7 @@ Localization operations focus on `TextProperty` and `GatherableTextData`.
 | `value` on decode success | ✅ Implemented | typed structured output |
 | safe fallback when decode fails (`value` omitted) | ✅ Implemented | command does not fail globally |
 | generic struct fallback (`rawBase64`) | ✅ Implemented | when recursive generic decode fails |
-| detailed Text history reconstruction by type | ✅ Implemented | UE5.6 `ETextHistoryType` (`Base..TextGenerator` + `None`) |
+| detailed Text history reconstruction by type | ✅ Implemented | UE5.6/5.7 `ETextHistoryType` (`Base..TextGenerator` + `None`) |
 | full unsigned preservation for `UInt64Property` | ✅ Implemented | kept as `uint64` in JSON |
 | legacy `FName AssetPathName + FString SubPath` `FSoftObjectPath` (UE5 pre-1007) | ✅ Implemented | UE5 `1000..1006` branch supported |
 
@@ -177,7 +180,7 @@ Localization operations focus on `TextProperty` and `GatherableTextData`.
 | `EnumProperty` | `{"enumType":"EMyEnum","value":"EMyEnum::ValueA"}` | ✅ Implemented | falls back to numeric when name resolve fails |
 | `ObjectProperty` / `ClassProperty` / `WeakObjectProperty` / `LazyObjectProperty` / `InterfaceProperty` | `{"index":1,"resolved":"..."}` | ✅ Implemented | |
 | `SoftObjectProperty` / `SoftObjectPathProperty` / `SoftClassPathProperty` | `{"packageName":"...","assetName":"...","subPath":"..."}` | ✅ Implemented | UE5 legacy/new layouts + summary-list index decode |
-| `TextProperty` | `{"flags":0,"historyType":"NamedFormat","historyTypeCode":1,...,"displayString":"..."}` | ⚠️ Partial | history payloads covered for UE5.6; `.locres` resolution is via `bpx localization resolve` |
+| `TextProperty` | `{"flags":0,"historyType":"NamedFormat","historyTypeCode":1,...,"displayString":"..."}` | ⚠️ Partial | history payloads covered for UE5.6/5.7; `.locres` resolution is via `bpx localization resolve` |
 | `DelegateProperty` | `{"object":0,"resolved":"...","delegate":"FunctionName"}` | ✅ Implemented | |
 | `MulticastDelegateProperty` / `MulticastInlineDelegateProperty` / `MulticastSparseDelegateProperty` | array of DelegateProperty | ✅ Implemented | |
 | `FieldPathProperty` | `{"path":["FieldA","FieldB"],"resolvedOwner":0}` | ✅ Implemented | |

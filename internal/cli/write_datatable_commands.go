@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -210,16 +211,10 @@ func runDataTableAddRow(args []string, stdout, stderr io.Writer) int {
 	}
 	rowNameBytes := encodeNameRef(nameRef, packageByteOrder(asset))
 
-	var rowPayload []byte
-	if len(layout.Rows) > 0 {
-		template := layout.Rows[0]
-		rowPayload = append([]byte(nil), asset.Raw.Bytes[template.Start:template.End]...)
-	} else {
-		rowPayload, err = buildTaggedNonePayload(asset)
-		if err != nil {
-			fmt.Fprintf(stderr, "error: %v\n", err)
-			return 1
-		}
+	rowPayload, err := inferDataTableDefaultRowPayload(asset, targetIdx, layout)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: %v\n", err)
+		return 1
 	}
 
 	keys := make([]string, 0, len(updates))
@@ -406,7 +401,10 @@ func resolveDataTableExportIndexForUpdate(asset *uasset.Asset, explicitIndex int
 			foundCurve = true
 		}
 	}
-	if foundComposite || foundCurve {
+	if foundComposite {
+		return 0, fmt.Errorf("writable DataTable export not found (asset contains CompositeDataTable; datatable write commands support DataTable only)")
+	}
+	if foundCurve {
 		return 0, fmt.Errorf("writable DataTable export not found (datatable write commands support DataTable only)")
 	}
 	return 0, fmt.Errorf("datatable export not found")
@@ -554,6 +552,112 @@ func findDataTableRowByDisplay(rows []dataTableRowLocation, rowName string) (*da
 		}
 	}
 	return nil, false
+}
+
+func inferDataTableDefaultRowPayload(asset *uasset.Asset, exportIndex int, layout *dataTableRowLayout) ([]byte, error) {
+	if asset == nil {
+		return nil, fmt.Errorf("asset is nil")
+	}
+	if layout == nil || len(layout.Rows) == 0 {
+		return buildTaggedNonePayload(asset)
+	}
+
+	bestScore := -1
+	bestLen := 0
+	var bestPayload []byte
+	for _, row := range layout.Rows {
+		if row.Start < 0 || row.End < row.Start || row.End > len(asset.Raw.Bytes) {
+			return nil, fmt.Errorf("datatable row payload range out of bounds")
+		}
+		props := asset.ParseTaggedPropertiesRange(row.Start, row.End, false)
+		if len(props.Warnings) > 0 {
+			return nil, fmt.Errorf("cannot safely infer datatable default row payload: %s", strings.Join(props.Warnings, "; "))
+		}
+
+		score := 0
+		for _, prop := range props.Properties {
+			decoded, ok := asset.DecodePropertyValue(prop)
+			if !ok {
+				return nil, fmt.Errorf("cannot safely infer datatable default row payload: property %s is not decodable", prop.Name.Display(asset.Names))
+			}
+			if isDefaultLikeDataTableValue(decoded) {
+				score++
+			}
+		}
+
+		payload := append([]byte(nil), asset.Raw.Bytes[row.Start:row.End]...)
+		if score > bestScore || (score == bestScore && (bestPayload == nil || len(payload) < bestLen)) {
+			bestScore = score
+			bestLen = len(payload)
+			bestPayload = payload
+		}
+	}
+	if bestScore <= 0 || len(bestPayload) == 0 {
+		return nil, fmt.Errorf("cannot safely infer datatable default row payload from existing rows")
+	}
+	return bestPayload, nil
+}
+
+func isDefaultLikeDataTableValue(raw any) bool {
+	switch v := raw.(type) {
+	case nil:
+		return true
+	case bool:
+		return !v
+	case int:
+		return v == 0
+	case int8:
+		return v == 0
+	case int16:
+		return v == 0
+	case int32:
+		return v == 0
+	case int64:
+		return v == 0
+	case uint:
+		return v == 0
+	case uint8:
+		return v == 0
+	case uint16:
+		return v == 0
+	case uint32:
+		return v == 0
+	case uint64:
+		return v == 0
+	case float32:
+		return v == 0
+	case float64:
+		return v == 0
+	case string:
+		return strings.TrimSpace(v) == ""
+	case json.Number:
+		return v == "0" || v == "0.0"
+	case []any:
+		for _, item := range v {
+			if !isDefaultLikeDataTableValue(item) {
+				return false
+			}
+		}
+		return true
+	case map[string]any:
+		if _, ok := v["enumType"]; ok {
+			return false
+		}
+		if value, ok := v["value"]; ok {
+			return isDefaultLikeDataTableValue(value)
+		}
+		if len(v) == 0 {
+			return true
+		}
+		for _, item := range v {
+			if !isDefaultLikeDataTableValue(item) {
+				return false
+			}
+		}
+		return true
+	default:
+		return false
+	}
 }
 
 func rewriteDataTableRowPayload(asset *uasset.Asset, exportIndex int, rowLoc *dataTableRowLocation, rowPayload []byte) ([]byte, error) {

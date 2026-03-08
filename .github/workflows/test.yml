@@ -36,5 +36,8 @@ jobs:
       - name: unit tests
         run: go test ./... -v
 
+      - name: Verify changelog has current CLI version entry
+        run: ./scripts/check-changelog-entry.sh "$(go run ./cmd/bpx version)"
+
       - name: short fuzz (parse)
         run: go test ./pkg/uasset -fuzz FuzzParseAsset -fuzztime 5s

@@ -1,0 +1,33 @@
+{
+  "argv": [
+    "name",
+    "set",
+    "testdata/golden/parse/BP_Empty.uasset",
+    "--index",
+    "1",
+    "--value",
+    "/Script/CoreUObject_Renamed",
+    "--dry-run"
+  ],
+  "expected": {
+    "changed": true,
+    "dryRun": true,
+    "file": "testdata/golden/parse/BP_Empty.uasset",
+    "index": 1,
+    "newEntry": {
+      "casePreservingHash": 43225,
+      "nonCaseHash": 30037,
+      "value": "/Script/CoreUObject_Renamed"
+    },
+    "oldEntry": {
+      "casePreservingHash": 15917,
+      "nonCaseHash": 18936,
+      "value": "/Script/CoreUObject"
+    },
+    "outputBytes": 23711
+  },
+  "generatedAt": "2026-03-06T17:08:06Z",
+  "generatedBy": "scripts/gen_expected_output",
+  "name": "name_set_BP_Empty_dry_run",
+  "oracle": "ue-fixture"
+}

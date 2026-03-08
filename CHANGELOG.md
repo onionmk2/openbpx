@@ -6,14 +6,39 @@ The format is based on Keep a Changelog and the project follows Semantic Version
 
 ## [Unreleased]
 
-## [0.1.7]
+## [0.1.8]
+
+### Added
+
+- `bpx read level actor-search` command for filtering `PersistentLevel` exports by actor attributes.
+- `bpx read material` command with material inspection output and aggregated HLSL extraction support.
+- BPX command-skill coverage for asset inspection and edit workflows, including new material- and version-focused skill generation.
+- Public-release auto-tagging and stronger release guards so tags and changelog entries stay aligned with `bpx version`.
 
 ### Changed
 
-- BPX CLI default version string updated to `0.1.7`.
-- CLI version output tests now expect `0.1.7`.
-- Claude plugin manifest version updated to `0.1.7`.
-- Bug report issue template default version placeholder updated to `0.1.7`.
+- BPX CLI, Claude plugin manifest, and issue-template version references now target `0.1.8`.
+- README and installation guidance were reorganized across platforms, including clarified Debian/Ubuntu flows and package-manager-first setup.
+- Golden-fixture generation now runs across configured engines in parallel, and operation-fixture coverage tracking is stricter.
+- UE 5.7.3 is now covered by versioned golden tests within the supported UE window `FileVersionUE5=1000..1018` (UE 5.0 to 5.7).
+
+### Fixed
+
+- UE 5.6 and UE 5.7 rewrite behavior, goldens, and operation-equivalence fixtures were realigned with expected UE outputs.
+- Synthetic version-window fixtures were repaired to match supported parser behavior.
+- Unused CLI compaction helpers that were breaking `staticcheck` were removed.
+
+## [0.1.7]
+
+### Added
+
+- CLI subcommand dispatching for clearer command handling and more structured help output.
+
+### Changed
+
+- Command help and dispatch coverage were reorganized across read and write command families.
+- Installation guidance stopped pinning a specific `bpx` version in example steps.
+- BPX CLI, Claude plugin manifest, issue-template placeholder, and changelog references were updated to `0.1.7`.
 
 ## [0.1.6]
 

@@ -1,0 +1,86 @@
+{
+  "argv": [
+    "var",
+    "list",
+    "testdata/golden/parse/BP_SimpleVars.uasset"
+  ],
+  "expected": {
+    "cdoExport": 3,
+    "count": 7,
+    "file": "testdata/golden/parse/BP_SimpleVars.uasset",
+    "variables": [
+      {
+        "default": true,
+        "mismatch": false,
+        "name": "MyBool",
+        "source": "merged",
+        "type": "BoolProperty"
+      },
+      {
+        "default": 3.14,
+        "mismatch": false,
+        "name": "MyFloat",
+        "source": "merged",
+        "type": "FloatProperty"
+      },
+      {
+        "default": 42,
+        "mismatch": false,
+        "name": "MyInt",
+        "source": "merged",
+        "type": "IntProperty"
+      },
+      {
+        "default": {
+          "index": 86,
+          "name": "OldName",
+          "number": 0
+        },
+        "mismatch": false,
+        "name": "MyName",
+        "source": "merged",
+        "type": "NameProperty"
+      },
+      {
+        "default": {
+          "structType": "Rotator",
+          "value": {
+            "pitch": 45,
+            "roll": 180,
+            "yaw": 90
+          }
+        },
+        "mismatch": false,
+        "name": "MyRotator",
+        "source": "merged",
+        "type": "StructProperty(Rotator(/Script/CoreUObject))"
+      },
+      {
+        "default": "Hello",
+        "mismatch": false,
+        "name": "MyString",
+        "source": "merged",
+        "type": "StrProperty"
+      },
+      {
+        "default": {
+          "structType": "Vector",
+          "value": {
+            "x": 1,
+            "y": 2,
+            "z": 3
+          }
+        },
+        "mismatch": false,
+        "name": "MyVector",
+        "source": "merged",
+        "type": "StructProperty(Vector(/Script/CoreUObject))"
+      }
+    ],
+    "warnings": []
+  },
+  "generatedAt": "2026-03-06T17:08:06Z",
+  "generatedBy": "scripts/gen_expected_output",
+  "name": "var_list_BP_SimpleVars",
+  "oracle": "ue-fixture"
+}

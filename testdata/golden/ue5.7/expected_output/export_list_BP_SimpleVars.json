@@ -1,0 +1,138 @@
+{
+  "argv": [
+    "export",
+    "list",
+    "testdata/golden/parse/BP_SimpleVars.uasset"
+  ],
+  "expected": {
+    "classFilter": "",
+    "count": 12,
+    "exports": [
+      {
+        "classIndex": -7,
+        "className": "Blueprint",
+        "index": 1,
+        "objectName": "BP_SimpleVars",
+        "outerIndex": 0,
+        "serialOffset": 21417,
+        "serialSize": 4805,
+        "superIndex": 0
+      },
+      {
+        "classIndex": -8,
+        "className": "BlueprintGeneratedClass",
+        "index": 2,
+        "objectName": "BP_SimpleVars_C",
+        "outerIndex": 0,
+        "serialOffset": 26222,
+        "serialSize": 1173,
+        "superIndex": -6
+      },
+      {
+        "classIndex": 2,
+        "className": "BP_SimpleVars_C",
+        "index": 3,
+        "objectName": "Default__BP_SimpleVars_C",
+        "outerIndex": 0,
+        "serialOffset": 27395,
+        "serialSize": 422,
+        "superIndex": 0
+      },
+      {
+        "classIndex": -9,
+        "className": "EdGraph",
+        "index": 4,
+        "objectName": "EventGraph",
+        "outerIndex": 1,
+        "serialOffset": 27817,
+        "serialSize": 185,
+        "superIndex": 0
+      },
+      {
+        "classIndex": -9,
+        "className": "EdGraph",
+        "index": 5,
+        "objectName": "UserConstructionScript",
+        "outerIndex": 1,
+        "serialOffset": 28002,
+        "serialSize": 177,
+        "superIndex": 0
+      },
+      {
+        "classIndex": -3,
+        "className": "K2Node_Event",
+        "index": 6,
+        "objectName": "K2Node_Event_0",
+        "outerIndex": 4,
+        "serialOffset": 28179,
+        "serialSize": 870,
+        "superIndex": 0
+      },
+      {
+        "classIndex": -3,
+        "className": "K2Node_Event",
+        "index": 7,
+        "objectName": "K2Node_Event_1",
+        "outerIndex": 4,
+        "serialOffset": 29049,
+        "serialSize": 1145,
+        "superIndex": 0
+      },
+      {
+        "classIndex": -3,
+        "className": "K2Node_Event",
+        "index": 8,
+        "objectName": "K2Node_Event_2",
+        "outerIndex": 4,
+        "serialOffset": 30194,
+        "serialSize": 1155,
+        "superIndex": 0
+      },
+      {
+        "classIndex": -4,
+        "className": "K2Node_FunctionEntry",
+        "index": 9,
+        "objectName": "K2Node_FunctionEntry_0",
+        "outerIndex": 5,
+        "serialOffset": 31349,
+        "serialSize": 401,
+        "superIndex": 0
+      },
+      {
+        "classIndex": -10,
+        "className": "SceneComponent",
+        "index": 10,
+        "objectName": "DefaultSceneRoot_GEN_VARIABLE",
+        "outerIndex": 2,
+        "serialOffset": 31750,
+        "serialSize": 42,
+        "superIndex": 0
+      },
+      {
+        "classIndex": -11,
+        "className": "SCS_Node",
+        "index": 11,
+        "objectName": "SCS_Node_0",
+        "outerIndex": 12,
+        "serialOffset": 31792,
+        "serialSize": 231,
+        "superIndex": 0
+      },
+      {
+        "classIndex": -12,
+        "className": "SimpleConstructionScript",
+        "index": 12,
+        "objectName": "SimpleConstructionScript_0",
+        "outerIndex": 2,
+        "serialOffset": 32023,
+        "serialSize": 132,
+        "superIndex": 0
+      }
+    ],
+    "file": "testdata/golden/parse/BP_SimpleVars.uasset"
+  },
+  "generatedAt": "2026-03-06T17:08:06Z",
+  "generatedBy": "scripts/gen_expected_output",
+  "name": "export_list_BP_SimpleVars",
+  "oracle": "ue-fixture"
+}

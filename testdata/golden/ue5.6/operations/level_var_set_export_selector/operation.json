@@ -1,0 +1,12 @@
+{
+  "command": "level var-set",
+  "args": {
+    "actor": "4",
+    "path": "NavigationSystemConfig",
+    "value": "0"
+  },
+  "ue_procedure": "Reject placed-actor NavigationSystemConfig rewrite when selected by export index",
+  "expect": "error_equal",
+  "error_contains": "not supported by level var-set",
+  "notes": "Level var-set currently rejects NavigationSystemConfig even when selected by export index."
+}

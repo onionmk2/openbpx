@@ -1,0 +1,12 @@
+{
+	"command": "prop set",
+	"args":
+	{
+		"export": 3,
+		"path": "VBool",
+		"value": "false"
+	},
+	"ue_procedure": "Toggle BoolProperty default on scalar fixture",
+	"expect": "byte_equal",
+	"notes": "Validated on ue5.6/ue5.7 scalar fixture roots."
+}

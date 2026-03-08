@@ -1,0 +1,12 @@
+{
+	"command": "prop set",
+	"args":
+	{
+		"export": 3,
+		"path": "VTransform.Translation",
+		"value": "{\"x\":1,\"y\":2,\"z\":3}"
+	},
+	"ue_procedure": "Update nested Transform.Translation struct",
+	"expect": "byte_equal",
+	"notes": "Validated on ue5.6/ue5.7 math fixture roots."
+}

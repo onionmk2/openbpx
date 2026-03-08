@@ -93,9 +93,11 @@ type PackageSummary struct {
 	SoftPackageReferencesCount  int32 `json:"softPackageReferencesCount"`
 	SoftPackageReferencesOffset int32 `json:"softPackageReferencesOffset"`
 
-	SearchableNamesOffset int32 `json:"searchableNamesOffset"`
-	ThumbnailTableOffset  int32 `json:"thumbnailTableOffset"`
-	PersistentGUID        GUID  `json:"persistentGuid"`
+	SearchableNamesOffset       int32 `json:"searchableNamesOffset"`
+	ThumbnailTableOffset        int32 `json:"thumbnailTableOffset"`
+	ImportTypeHierarchiesCount  int32 `json:"importTypeHierarchiesCount,omitempty"`
+	ImportTypeHierarchiesOffset int32 `json:"importTypeHierarchiesOffset,omitempty"`
+	PersistentGUID              GUID  `json:"persistentGuid"`
 
 	Generations []GenerationInfo `json:"generations"`
 
@@ -157,7 +159,7 @@ func (s PackageSummary) SupportsSoftObjectPathListInSummary() bool {
 // IsUE56 reports whether summary looks like UE 5.6 package metadata.
 func (s PackageSummary) IsUE56() bool {
 	// UE5.6 package file versions observed in UE source notes are 1015..1017.
-	if s.FileVersionUE5 < ue5VerseCells || s.FileVersionUE5 > ue5MaximumKnown {
+	if s.FileVersionUE5 < ue5VerseCells || s.FileVersionUE5 > ue5OSSubObjectShadowSerialization {
 		return false
 	}
 

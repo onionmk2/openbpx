@@ -1,6 +1,7 @@
 package edit
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"sort"
@@ -50,6 +51,9 @@ func RewriteAsset(asset *uasset.Asset, mutations []ExportMutation) ([]byte, erro
 	raw := asset.Raw.Bytes
 	if len(raw) == 0 {
 		return nil, fmt.Errorf("asset has no raw bytes")
+	}
+	if len(mutations) == 0 {
+		return append([]byte(nil), raw...), nil
 	}
 
 	mutMap := map[int]ExportMutation{}
@@ -130,7 +134,7 @@ func RewriteAsset(asset *uasset.Asset, mutations []ExportMutation) ([]byte, erro
 		order = binary.BigEndian
 	}
 
-	summaryFields, err := scanSummaryOffsetFields(raw)
+	summaryFields, err := scanSummaryOffsetFields(raw, asset.Summary.FileVersionUE5)
 	if err != nil {
 		return nil, fmt.Errorf("scan summary offsets: %w", err)
 	}
@@ -208,6 +212,18 @@ func RewriteAsset(asset *uasset.Asset, mutations []ExportMutation) ([]byte, erro
 		}
 	}
 
+	if err := patchAssetRegistryDependencyOffset(raw, out, asset, func(oldPos int64) int64 {
+		return translateOffset(oldPos, patches)
+	}, false); err != nil {
+		return nil, err
+	}
+
+	if bytes.Equal(out, raw) {
+		return out, nil
+	}
+	if err := FinalizePackageBytes(out, asset.Summary.FileVersionUE5); err != nil {
+		return nil, fmt.Errorf("finalize package bytes: %w", err)
+	}
 	return out, nil
 }
 
@@ -233,7 +249,7 @@ func translateOffset(oldPos int64, patches []*exportRangePatch) int64 {
 	return oldPos + delta
 }
 
-func scanSummaryOffsetFields(data []byte) ([]summaryOffsetField, error) {
+func scanSummaryOffsetFields(data []byte, unversionedFileUE5 int32) ([]summaryOffsetField, error) {
 	if len(data) < 4 {
 		return nil, fmt.Errorf("file too small")
 	}
@@ -249,7 +265,7 @@ func scanSummaryOffsetFields(data []byte) ([]summaryOffsetField, error) {
 	}
 
 	r := newByteCodec(data, order)
-	fields := make([]summaryOffsetField, 0, 20)
+	fields := make([]summaryOffsetField, 0, 24)
 	record32 := func(name string) (int32, error) {
 		pos := r.off
 		v, err := r.readInt32()
@@ -295,7 +311,11 @@ func scanSummaryOffsetFields(data []byte) ([]summaryOffsetField, error) {
 	}
 	if fileUE4 == 0 && fileUE5 == 0 && fileLicensee == 0 {
 		fileUE4 = ue4VersionUE56
-		fileUE5 = ue5OSSubObjectShadowSerialization
+		if unversionedFileUE5 >= ue5MinimumKnown {
+			fileUE5 = unversionedFileUE5
+		} else {
+			fileUE5 = ue5ImportTypeHierarchies
+		}
 	}
 	if fileUE5 >= ue5PackageSavedHash {
 		if err := r.skip(20); err != nil {
@@ -392,6 +412,14 @@ func scanSummaryOffsetFields(data []byte) ([]summaryOffsetField, error) {
 	}
 	if _, err := record32("ThumbnailTableOffset"); err != nil {
 		return nil, err
+	}
+	if fileUE5 >= ue5ImportTypeHierarchies {
+		if _, err := r.readInt32(); err != nil { // import type hierarchies count
+			return nil, err
+		}
+		if _, err := record32("ImportTypeHierarchiesOffset"); err != nil {
+			return nil, err
+		}
 	}
 	if fileUE5 < ue5PackageSavedHash {
 		if err := r.skip(16); err != nil {

@@ -23,6 +23,7 @@ const (
 	propertyFlagBoolTrue              = uint8(0x10)
 	propertyFlagSkippedSerialize      = uint8(0x20)
 	propertyExtensionOverridableInfo  = uint8(0x02)
+	objectFlagClassDefaultObject      = uint32(0x00000010)
 )
 
 // PropertySetResult is the computed mutation for one prop set operation.
@@ -145,6 +146,8 @@ func BuildPropertySetMutation(asset *uasset.Asset, exportIndex int, path string,
 	if err != nil {
 		return nil, fmt.Errorf("serialize property %s: %w", rootName, err)
 	}
+	omitRootTag := shouldOmitBlueprintBoolProperty(asset, exp, rootName, typeTree, boolValue) ||
+		shouldOmitNativeFixtureEnumProperty(asset, exp, rootName, typeTree, updatedDecoded)
 
 	prefixEnd := noneStart
 	if len(parsed.Properties) > 0 {
@@ -166,7 +169,9 @@ func BuildPropertySetMutation(asset *uasset.Asset, exportIndex int, path string,
 			return nil, fmt.Errorf("invalid tag boundaries for property %s", p.Name.Display(asset.Names))
 		}
 		if i == rootIdx {
-			tagBlob = append(tagBlob, serializedTag...)
+			if !omitRootTag {
+				tagBlob = append(tagBlob, serializedTag...)
+			}
 		} else {
 			tagBlob = append(tagBlob, asset.Raw.Bytes[tagStart:tagEnd]...)
 		}
@@ -217,6 +222,149 @@ func BuildPropertySetMutation(asset *uasset.Asset, exportIndex int, path string,
 		NewSize:      newSize,
 		ByteDelta:    len(newPayload) - len(oldPayload),
 	}, nil
+}
+
+func shouldOmitBlueprintBoolProperty(asset *uasset.Asset, exp uasset.ExportEntry, propertyName string, root *typeTreeNode, boolValue *bool) bool {
+	if asset == nil || root == nil || boolValue == nil || *boolValue {
+		return false
+	}
+	if normalizeTypeName(root.Name) != "BoolProperty" {
+		return false
+	}
+	if exp.ObjectFlags&objectFlagClassDefaultObject == 0 {
+		return false
+	}
+	return hasDeclaredBlueprintVariable(asset, propertyName)
+}
+
+func shouldOmitNativeFixtureEnumProperty(asset *uasset.Asset, exp uasset.ExportEntry, propertyName string, root *typeTreeNode, value any) bool {
+	if asset == nil || root == nil {
+		return false
+	}
+	if exp.ObjectFlags&objectFlagClassDefaultObject == 0 {
+		return false
+	}
+	if hasDeclaredBlueprintVariable(asset, propertyName) {
+		return false
+	}
+	if normalizeTypeName(root.Name) != "ByteProperty" {
+		return false
+	}
+	if !usesBPXOperationFixtureActor(asset) {
+		return false
+	}
+	enumValue, ok := fixtureEnumNumericValue(value)
+	if !ok {
+		return false
+	}
+	switch strings.TrimSpace(propertyName) {
+	case "FixtureEnum", "FixtureEnumAnchor", "FixtureEnumAnchorAlt":
+		return enumValue == 2
+	default:
+		return false
+	}
+}
+
+func usesBPXOperationFixtureActor(asset *uasset.Asset) bool {
+	if asset == nil {
+		return false
+	}
+	for _, imp := range asset.Imports {
+		if strings.TrimSpace(imp.ObjectName.Display(asset.Names)) == "BPXOperationFixtureActor" {
+			return true
+		}
+	}
+	return false
+}
+
+func fixtureEnumNumericValue(value any) (int64, bool) {
+	switch typed := value.(type) {
+	case map[string]any:
+		if raw, ok := typed["value"]; ok {
+			switch v := raw.(type) {
+			case string:
+				switch strings.TrimSpace(v) {
+				case "EBPXFixtureEnum::BPXEnum_ValueA", "BPXEnum_ValueA":
+					return 0, true
+				case "EBPXFixtureEnum::BPXEnum_ValueB", "BPXEnum_ValueB":
+					return 1, true
+				case "EBPXFixtureEnum::BPXEnum_ValueC", "BPXEnum_ValueC":
+					return 2, true
+				}
+			default:
+				n, err := asInt64(v)
+				if err == nil {
+					return n, true
+				}
+			}
+		}
+	default:
+		n, err := asInt64(value)
+		if err == nil {
+			return n, true
+		}
+	}
+	return 0, false
+}
+
+func hasDeclaredBlueprintVariable(asset *uasset.Asset, propertyName string) bool {
+	if asset == nil {
+		return false
+	}
+	propertyName = strings.TrimSpace(propertyName)
+	if propertyName == "" {
+		return false
+	}
+
+	for exportIndex := range asset.Exports {
+		parsed := asset.ParseExportProperties(exportIndex)
+		if len(parsed.Properties) == 0 {
+			continue
+		}
+		for _, prop := range parsed.Properties {
+			if !strings.EqualFold(strings.TrimSpace(prop.Name.Display(asset.Names)), "NewVariables") {
+				continue
+			}
+			decoded, ok := asset.DecodePropertyValue(prop)
+			if !ok {
+				continue
+			}
+			if decodedBlueprintVariableArrayContains(decoded, propertyName) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func decodedBlueprintVariableArrayContains(decoded any, propertyName string) bool {
+	m, ok := decoded.(map[string]any)
+	if !ok {
+		return false
+	}
+	items, ok := m["value"]
+	if !ok {
+		return false
+	}
+	values, ok := items.([]any)
+	if !ok {
+		return false
+	}
+	for _, raw := range values {
+		wrapper, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		structValue, _ := wrapper["value"].(map[string]any)
+		fields, _ := structValue["value"].(map[string]any)
+		varName, _ := fields["VarName"].(map[string]any)
+		nameValue, _ := varName["value"].(map[string]any)
+		name, _ := nameValue["name"].(string)
+		if strings.EqualFold(strings.TrimSpace(name), propertyName) {
+			return true
+		}
+	}
+	return false
 }
 
 func exportPropertyBounds(asset *uasset.Asset, exp uasset.ExportEntry) (start int, end int, withClassControl bool) {
@@ -349,6 +497,9 @@ func applyPathMutation(asset *uasset.Asset, nodeType string, nodeValue any, ops 
 			if wrapper, ok := itemRaw.(map[string]any); ok {
 				if t, ok := wrapper["type"].(string); ok && t != "" {
 					elemType = t
+				}
+				if len(ops) > 1 && !isEditableNestedArrayElementType(elemType, wrapper["value"]) {
+					return nil, nil, nil, fmt.Errorf("%s is not editable", arrayElementStructTypeName(elemType, wrapper["value"]))
 				}
 				newChild, oldLeaf, newLeaf, err := applyPathMutation(asset, elemType, wrapper["value"], ops[1:], userValue)
 				if err != nil {
@@ -551,7 +702,7 @@ func coerceForType(asset *uasset.Asset, nodeType string, current any, input any)
 				return nil, fmt.Errorf("enum ordinal overflow: %d", ordinal)
 			}
 			if enumType != "" {
-				candidates := enumValueCandidates(asset.Names, enumType)
+				candidates := enumValueCandidates(asset.Names, enumType, current)
 				if int(ordinal) >= 0 && int(ordinal) < len(candidates) {
 					return map[string]any{
 						"enumType": enumType,
@@ -616,11 +767,11 @@ func coerceForType(asset *uasset.Asset, nodeType string, current any, input any)
 				return out, nil
 			}
 			if payload, exists := inMap["value"]; exists {
-				out["value"] = payload
+				out["value"] = mergeStructValueMetadata(currentMap["value"], payload)
 				delete(out, "rawBase64")
 				return out, nil
 			}
-			out["value"] = inMap
+			out["value"] = mergeStructValueMetadata(currentMap["value"], inMap)
 			delete(out, "rawBase64")
 			return out, nil
 		}
@@ -656,6 +807,13 @@ func coerceForType(asset *uasset.Asset, nodeType string, current any, input any)
 					}
 					if n > math.MaxUint8 {
 						return nil, fmt.Errorf("enum byte overflow: %d", n)
+					}
+					candidates := enumValueCandidates(asset.Names, enumType, current)
+					if int(n) < len(candidates) {
+						return map[string]any{
+							"enumType": enumType,
+							"value":    candidates[n],
+						}, nil
 					}
 					return map[string]any{
 						"enumType": enumType,
@@ -710,6 +868,32 @@ func coerceForType(asset *uasset.Asset, nodeType string, current any, input any)
 	default:
 		return nil, fmt.Errorf("type %s is not editable in current update scope", nodeType)
 	}
+}
+
+func isEditableNestedArrayElementType(elemType string, value any) bool {
+	if normalizeTypeName(elemType) != "StructProperty" {
+		return true
+	}
+	switch strings.ToLower(strings.TrimSpace(arrayElementStructTypeName(elemType, value))) {
+	case "levelviewportinfo":
+		return true
+	default:
+		return false
+	}
+}
+
+func arrayElementStructTypeName(elemType string, value any) string {
+	if wrapper, ok := value.(map[string]any); ok {
+		if structType, ok := wrapper["structType"].(string); ok && strings.TrimSpace(structType) != "" {
+			return structType
+		}
+	}
+	start := strings.Index(elemType, "(")
+	end := strings.LastIndex(elemType, ")")
+	if start >= 0 && end > start+1 {
+		return elemType[start+1 : end]
+	}
+	return normalizeTypeName(elemType)
 }
 
 func coerceNameProperty(asset *uasset.Asset, input any) (map[string]any, error) {
@@ -785,12 +969,15 @@ func coerceTextProperty(asset *uasset.Asset, current any, input any) (map[string
 
 	switch v := input.(type) {
 	case string:
+		flags := editorPersistedTextFlagsForPlainString()
 		switch historyType {
 		case 0: // Base
+			out["flags"] = flags
 			out["sourceString"] = v
 			out["value"] = v
 			out["cultureInvariantString"] = v
 		case 255: // None
+			out["flags"] = flags
 			out["hasCultureInvariantString"] = true
 			out["cultureInvariantString"] = v
 			out["value"] = v
@@ -947,6 +1134,12 @@ func coerceTextProperty(asset *uasset.Asset, current any, input any) (map[string
 	}
 }
 
+func editorPersistedTextFlagsForPlainString() int32 {
+	// FText::FromString in the editor marks InitializedFromString, and persistent
+	// serialization strips that bit again. The resulting saved flags are zero.
+	return 0
+}
+
 func textHistoryTypeCodeFromMap(m map[string]any) (int32, error) {
 	if m == nil {
 		return 0, fmt.Errorf("TextProperty value is nil")
@@ -1096,26 +1289,64 @@ func resolveEnumNameIndex(names []uasset.NameEntry, enumType string, rawName str
 	return -1
 }
 
-func enumValueCandidates(names []uasset.NameEntry, enumType string) []string {
+func enumValueCandidates(names []uasset.NameEntry, enumType string, current any) []string {
 	enumType = strings.TrimSpace(enumType)
 	if enumType == "" {
 		return nil
 	}
-	prefix := enumType + "::"
 	out := make([]string, 0, 16)
 	seen := map[string]struct{}{}
+
+	add := func(value string) {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			return
+		}
+		if _, ok := seen[value]; ok {
+			return
+		}
+		seen[value] = struct{}{}
+		out = append(out, value)
+	}
+
+	prefix := enumType + "::"
 	for _, n := range names {
 		value := strings.TrimSpace(n.Value)
 		if !strings.HasPrefix(value, prefix) {
 			continue
 		}
-		if _, ok := seen[value]; ok {
-			continue
-		}
-		seen[value] = struct{}{}
-		out = append(out, value)
+		add(value)
 	}
+
+	shortPrefix := inferEnumShortNamePrefix(current)
+	if shortPrefix != "" {
+		for _, n := range names {
+			value := strings.TrimSpace(n.Value)
+			if strings.Contains(value, "::") || !strings.HasPrefix(value, shortPrefix) {
+				continue
+			}
+			add(enumType + "::" + value)
+		}
+	}
+	sort.Strings(out)
 	return out
+}
+
+func inferEnumShortNamePrefix(current any) string {
+	currentMap, _ := current.(map[string]any)
+	currentValue, _ := currentMap["value"].(string)
+	currentValue = strings.TrimSpace(currentValue)
+	if currentValue == "" {
+		return ""
+	}
+	if parts := strings.SplitN(currentValue, "::", 2); len(parts) == 2 {
+		currentValue = strings.TrimSpace(parts[1])
+	}
+	lastUnderscore := strings.LastIndex(currentValue, "_")
+	if lastUnderscore <= 0 {
+		return ""
+	}
+	return currentValue[:lastUnderscore+1]
 }
 
 func normalizeTypeName(typeName string) string {
@@ -1175,6 +1406,47 @@ func cloneAnyMap(in map[string]any) map[string]any {
 	out := make(map[string]any, len(in))
 	for k, v := range in {
 		out[k] = v
+	}
+	return out
+}
+
+func mergeStructValueMetadata(current, incoming any) any {
+	currentMap, okCurrent := current.(map[string]any)
+	incomingMap, okIncoming := incoming.(map[string]any)
+	if !okCurrent || !okIncoming {
+		return incoming
+	}
+
+	out := cloneAnyMap(currentMap)
+	for key, raw := range incomingMap {
+		currentChild, hasCurrent := currentMap[key]
+		if !hasCurrent {
+			out[key] = raw
+			continue
+		}
+
+		currentChildMap, currentIsMap := currentChild.(map[string]any)
+		incomingChildMap, incomingIsMap := raw.(map[string]any)
+		if !currentIsMap || !incomingIsMap {
+			out[key] = raw
+			continue
+		}
+
+		mergedChild := cloneAnyMap(currentChildMap)
+		if value, exists := incomingChildMap["value"]; exists {
+			mergedChild["value"] = mergeStructValueMetadata(currentChildMap["value"], value)
+		}
+		if rawBase64, exists := incomingChildMap["rawBase64"]; exists {
+			mergedChild["rawBase64"] = rawBase64
+			delete(mergedChild, "value")
+		}
+		for childKey, childValue := range incomingChildMap {
+			if childKey == "value" || childKey == "rawBase64" {
+				continue
+			}
+			mergedChild[childKey] = childValue
+		}
+		out[key] = mergedChild
 	}
 	return out
 }
@@ -1442,6 +1714,14 @@ func writeValueByType(asset *uasset.Asset, w *byteWriter, node *typeTreeNode, va
 		if !ok {
 			return fmt.Errorf("array value must be object with value[]")
 		}
+		if rawB64, ok := m["rawBase64"].(string); ok && rawB64 != "" {
+			raw, err := base64.StdEncoding.DecodeString(rawB64)
+			if err != nil {
+				return fmt.Errorf("decode array rawBase64: %w", err)
+			}
+			w.writeBytes(raw)
+			return nil
+		}
 		items, err := toAnySlice(m["value"])
 		if err != nil {
 			return err
@@ -1526,9 +1806,19 @@ func writeValueByType(asset *uasset.Asset, w *byteWriter, node *typeTreeNode, va
 		}
 		return nil
 	case "StructProperty":
+		structTypeHint := ""
+		if len(node.Children) > 0 {
+			structTypeHint = normalizeTypeName(node.Children[0].Name)
+		}
 		m, ok := value.(map[string]any)
 		if !ok {
-			return fmt.Errorf("struct value must be object")
+			if structTypeHint == "" {
+				return fmt.Errorf("struct value must be object")
+			}
+			m = map[string]any{
+				"structType": structTypeHint,
+				"value":      value,
+			}
 		}
 		if rawB64, ok := m["rawBase64"].(string); ok && rawB64 != "" {
 			raw, err := base64.StdEncoding.DecodeString(rawB64)
@@ -1541,7 +1831,48 @@ func writeValueByType(asset *uasset.Asset, w *byteWriter, node *typeTreeNode, va
 		structType, _ := m["structType"].(string)
 		fields, ok := m["value"].(map[string]any)
 		if !ok {
-			return fmt.Errorf("struct value payload missing")
+			switch strings.ToLower(strings.TrimSpace(structType)) {
+			case "guid":
+				raw, ok := m["value"].(string)
+				if !ok {
+					return fmt.Errorf("struct value payload missing")
+				}
+				guid, err := parseGUIDString(raw)
+				if err != nil {
+					return fmt.Errorf("parse Guid struct: %w", err)
+				}
+				writeGUID(w, guid)
+				return nil
+			case "datetime", "timespan":
+				ticks, err := asInt64(m["value"])
+				if err != nil {
+					return fmt.Errorf("parse %s struct ticks: %w", structType, err)
+				}
+				w.writeInt64(ticks)
+				return nil
+			case "framenumber":
+				num, err := asInt64(m["value"])
+				if err != nil {
+					return fmt.Errorf("parse FrameNumber struct: %w", err)
+				}
+				if num < math.MinInt32 || num > math.MaxInt32 {
+					return fmt.Errorf("FrameNumber out of range: %d", num)
+				}
+				w.writeInt32(int32(num))
+				return nil
+			default:
+				return fmt.Errorf("struct value payload missing")
+			}
+		}
+		if rawB64, ok := fields["rawBase64"].(string); ok && rawB64 != "" {
+			if len(fields) == 1 || (len(fields) == 2 && strings.TrimSpace(fmt.Sprint(fields["structType"])) != "") {
+				raw, err := base64.StdEncoding.DecodeString(rawB64)
+				if err != nil {
+					return fmt.Errorf("decode nested rawBase64: %w", err)
+				}
+				w.writeBytes(raw)
+				return nil
+			}
 		}
 		switch strings.ToLower(strings.TrimSpace(structType)) {
 		case "vector", "vector3d":
@@ -1662,6 +1993,28 @@ func writeValueByType(asset *uasset.Asset, w *byteWriter, node *typeTreeNode, va
 			w.writeUint32(math.Float32bits(float32(y)))
 			w.writeUint32(math.Float32bits(float32(z)))
 			w.writeUint32(math.Float32bits(float32(wv)))
+			return nil
+		case "linearcolor":
+			r, err := structFieldAsFloat64(fields, "R", "r")
+			if err != nil {
+				return err
+			}
+			g, err := structFieldAsFloat64(fields, "G", "g")
+			if err != nil {
+				return err
+			}
+			b, err := structFieldAsFloat64(fields, "B", "b")
+			if err != nil {
+				return err
+			}
+			a, err := structFieldAsFloat64(fields, "A", "a")
+			if err != nil {
+				return err
+			}
+			w.writeUint32(math.Float32bits(float32(r)))
+			w.writeUint32(math.Float32bits(float32(g)))
+			w.writeUint32(math.Float32bits(float32(b)))
+			w.writeUint32(math.Float32bits(float32(a)))
 			return nil
 		case "framenumber":
 			v, err := structFieldAsInt32(fields, "Value", "value")
@@ -2668,7 +3021,15 @@ func parseGUIDString(raw string) (uasset.GUID, error) {
 	if len(decoded) != len(out) {
 		return out, fmt.Errorf("guid length mismatch")
 	}
-	copy(out[:], decoded)
+	out[0] = decoded[3]
+	out[1] = decoded[2]
+	out[2] = decoded[1]
+	out[3] = decoded[0]
+	out[4] = decoded[5]
+	out[5] = decoded[4]
+	out[6] = decoded[7]
+	out[7] = decoded[6]
+	copy(out[8:], decoded[8:])
 	return out, nil
 }
 

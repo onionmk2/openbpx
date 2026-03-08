@@ -3,12 +3,22 @@ set -euo pipefail
 
 usage() {
   cat <<USAGE
-Usage: $(basename "$0") --lyra-root <path> [--force]
+Usage: $(basename "$0") [--lyra-root <path>] [--force] [--config <path>]
 USAGE
 }
 
 lyra_root=""
 force="0"
+config_path=""
+
+to_windows_path() {
+  local input="$1"
+  if [[ "$input" =~ ^[A-Za-z]:[\\/].* ]] || [[ "$input" == \\\\* ]]; then
+    printf '%s' "$input"
+    return 0
+  fi
+  wslpath -w "$input"
+}
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -19,6 +29,10 @@ while [[ $# -gt 0 ]]; do
     --force)
       force="1"
       shift
+      ;;
+    --config)
+      config_path="${2:-}"
+      shift 2
       ;;
     -h|--help)
       usage
@@ -32,12 +46,6 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -z "$lyra_root" ]]; then
-  echo "--lyra-root is required." >&2
-  usage >&2
-  exit 2
-fi
-
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ps_script="$script_dir/sync-bpx-plugin.ps1"
 
@@ -46,12 +54,17 @@ if [[ ! -f "$ps_script" ]]; then
   exit 1
 fi
 
-lyra_root_win="$(wslpath -w "$lyra_root")"
-ps_script_win="$(wslpath -w "$ps_script")"
+ps_script_win="$(to_windows_path "$ps_script")"
 
-cmd=(powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$ps_script_win" -LyraRoot "$lyra_root_win")
+cmd=(powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$ps_script_win")
+if [[ -n "$lyra_root" ]]; then
+  cmd+=(-LyraRoot "$(to_windows_path "$lyra_root")")
+fi
 if [[ "$force" == "1" ]]; then
   cmd+=(-Force)
+fi
+if [[ -n "$config_path" ]]; then
+  cmd+=(-ConfigPath "$(to_windows_path "$config_path")")
 fi
 
 "${cmd[@]}"

@@ -22,115 +22,149 @@ type operationIgnoreRange struct {
 type operationSpec struct {
 	Command       string                 `json:"command"`
 	Args          map[string]any         `json:"args"`
+	ActualFile    string                 `json:"actual_file,omitempty"`
 	UEProcedure   string                 `json:"ue_procedure"`
 	Expect        string                 `json:"expect"`
+	ErrorContains string                 `json:"error_contains"`
 	Notes         string                 `json:"notes"`
 	IgnoreOffsets []operationIgnoreRange `json:"ignore_offsets"`
 }
 
 func TestOperationEquivalence(t *testing.T) {
-	operationsDir := filepath.Join("..", "..", "testdata", "golden", "operations")
-	entries, err := os.ReadDir(operationsDir)
-	if err != nil {
-		t.Fatalf("read operations dir: %v", err)
+	roots := goldenFixtureRoots(t, "operations")
+	if len(roots) == 0 {
+		t.Fatalf("no operations fixture roots found")
 	}
 
-	dirs := make([]string, 0, len(entries))
-	for _, entry := range entries {
-		if entry.IsDir() {
-			dirs = append(dirs, filepath.Join(operationsDir, entry.Name()))
-		}
-	}
-	sort.Strings(dirs)
-	if len(dirs) == 0 {
-		t.Fatalf("no operation fixture directories found")
-	}
-
-	byteEqualCount := 0
-	for _, opDir := range dirs {
-		opDir := opDir
-		t.Run(filepath.Base(opDir), func(t *testing.T) {
-			specPath := filepath.Join(opDir, "operation.json")
-			beforePath := filepath.Join(opDir, "before.uasset")
-			afterPath := filepath.Join(opDir, "after.uasset")
-
-			specBytes, err := os.ReadFile(specPath)
+	for _, root := range roots {
+		root := root
+		t.Run(filepath.Base(root), func(t *testing.T) {
+			operationsDir := filepath.Join(root, "operations")
+			entries, err := os.ReadDir(operationsDir)
 			if err != nil {
-				t.Fatalf("read operation spec: %v", err)
-			}
-			var spec operationSpec
-			if err := json.Unmarshal(specBytes, &spec); err != nil {
-				t.Fatalf("parse operation spec: %v", err)
-			}
-			if strings.TrimSpace(spec.Command) == "" {
-				t.Fatalf("operation command must not be empty")
-			}
-			if len(spec.Args) == 0 {
-				t.Fatalf("operation args must not be empty")
+				t.Fatalf("read operations dir: %v", err)
 			}
 
-			beforeBytes, err := os.ReadFile(beforePath)
-			if err != nil {
-				t.Fatalf("read before fixture: %v", err)
-			}
-			afterBytes, err := os.ReadFile(afterPath)
-			if err != nil {
-				t.Fatalf("read after fixture: %v", err)
-			}
-
-			tempDir := t.TempDir()
-			tempFile := filepath.Join(tempDir, "work.uasset")
-			if err := os.WriteFile(tempFile, beforeBytes, 0o644); err != nil {
-				t.Fatalf("write temp fixture: %v", err)
-			}
-
-			argv, err := buildOperationArgv(spec, tempFile)
-			if err != nil {
-				t.Fatalf("build operation argv: %v", err)
-			}
-
-			var stdout bytes.Buffer
-			var stderr bytes.Buffer
-			code := Run(argv, &stdout, &stderr)
-
-			expect := strings.TrimSpace(spec.Expect)
-			if expect == "" {
-				expect = "byte_equal"
-			}
-
-			switch expect {
-			case "unsupported":
-				if code == 0 {
-					t.Skipf("operation fixture marked unsupported is now implemented: argv=%v", argv)
+			dirs := make([]string, 0, len(entries))
+			for _, entry := range entries {
+				if entry.IsDir() {
+					dirs = append(dirs, filepath.Join(operationsDir, entry.Name()))
 				}
-				return
-			case "byte_equal":
-				byteEqualCount++
-				if code != 0 {
-					t.Fatalf("operation command failed (code=%d): argv=%v stderr=%s", code, argv, stderr.String())
-				}
-			default:
-				t.Fatalf("unsupported expect value: %s", expect)
+			}
+			sort.Strings(dirs)
+			if len(dirs) == 0 {
+				t.Fatalf("no operation fixture directories found")
 			}
 
-			actualBytes, err := os.ReadFile(tempFile)
-			if err != nil {
-				t.Fatalf("read command output bytes: %v", err)
+			byteEqualCount := 0
+			for _, opDir := range dirs {
+				opDir := opDir
+				t.Run(filepath.Base(opDir), func(t *testing.T) {
+					specPath := filepath.Join(opDir, "operation.json")
+					beforePath, err := findOperationFixtureFile(opDir, "before")
+					if err != nil {
+						t.Fatalf("resolve before fixture: %v", err)
+					}
+					afterPath, err := findOperationFixtureFile(opDir, "after")
+					if err != nil {
+						t.Fatalf("resolve after fixture: %v", err)
+					}
+
+					specBytes, err := os.ReadFile(specPath)
+					if err != nil {
+						t.Fatalf("read operation spec: %v", err)
+					}
+					var spec operationSpec
+					if err := json.Unmarshal(specBytes, &spec); err != nil {
+						t.Fatalf("parse operation spec: %v", err)
+					}
+					if strings.TrimSpace(spec.Command) == "" {
+						t.Fatalf("operation command must not be empty")
+					}
+					if len(spec.Args) == 0 {
+						t.Fatalf("operation args must not be empty")
+					}
+
+					beforeBytes, err := os.ReadFile(beforePath)
+					if err != nil {
+						t.Fatalf("read before fixture: %v", err)
+					}
+					afterBytes, err := os.ReadFile(afterPath)
+					if err != nil {
+						t.Fatalf("read after fixture: %v", err)
+					}
+
+					tempDir := t.TempDir()
+					tempFile := filepath.Join(tempDir, "work.uasset")
+					if err := os.WriteFile(tempFile, beforeBytes, 0o644); err != nil {
+						t.Fatalf("write temp fixture: %v", err)
+					}
+
+					argv, err := buildOperationArgv(spec, tempFile)
+					if err != nil {
+						t.Fatalf("build operation argv: %v", err)
+					}
+
+					var stdout bytes.Buffer
+					var stderr bytes.Buffer
+					code := Run(argv, &stdout, &stderr)
+
+					expect := strings.TrimSpace(spec.Expect)
+					if expect == "" {
+						expect = "byte_equal"
+					}
+
+					switch expect {
+					case "byte_equal":
+						byteEqualCount++
+						if code != 0 {
+							t.Fatalf("operation command failed (code=%d): argv=%v stderr=%s", code, argv, stderr.String())
+						}
+					case "error_equal":
+						if code == 0 {
+							t.Fatalf("operation fixture was expected to fail: argv=%v stdout=%s", argv, stdout.String())
+						}
+						if spec.ErrorContains != "" && !strings.Contains(strings.ToLower(stderr.String()), strings.ToLower(spec.ErrorContains)) {
+							t.Fatalf("stderr mismatch: want substring %q got %q", spec.ErrorContains, stderr.String())
+						}
+					default:
+						t.Fatalf("unsupported expect value: %s", expect)
+					}
+
+					actualPath := resolveOperationPathTemplate(spec.ActualFile, tempFile)
+					if actualPath == "" {
+						actualPath = tempFile
+					}
+					actualBytes, err := os.ReadFile(actualPath)
+					if err != nil {
+						t.Fatalf("read command output bytes: %v", err)
+					}
+
+					match, err := equalBytesWithIgnoredOffsets(actualBytes, afterBytes, spec.IgnoreOffsets)
+					if err != nil {
+						t.Fatalf("compare output bytes: %v", err)
+					}
+					if !match {
+						t.Fatalf("byte mismatch for operation fixture\nargv=%v", argv)
+					}
+				})
 			}
 
-			match, err := equalBytesWithIgnoredOffsets(actualBytes, afterBytes, spec.IgnoreOffsets)
-			if err != nil {
-				t.Fatalf("compare output bytes: %v", err)
-			}
-			if !match {
-				t.Fatalf("byte mismatch for operation fixture\nargv=%v", argv)
+			if byteEqualCount == 0 {
+				t.Fatalf("no byte_equal operation fixtures found")
 			}
 		})
 	}
+}
 
-	if byteEqualCount == 0 {
-		t.Fatalf("no byte_equal operation fixtures found")
+func findOperationFixtureFile(opDir, stem string) (string, error) {
+	for _, ext := range []string{".uasset", ".umap"} {
+		path := filepath.Join(opDir, stem+ext)
+		if _, err := os.Stat(path); err == nil {
+			return path, nil
+		}
 	}
+	return "", fmt.Errorf("missing %s fixture in %s", stem, opDir)
 }
 
 func buildOperationArgv(spec operationSpec, targetFile string) ([]string, error) {
@@ -148,7 +182,7 @@ func buildOperationArgv(spec operationSpec, targetFile string) ([]string, error)
 	}
 	sort.Strings(keys)
 	for _, key := range keys {
-		value, err := formatOperationArgValue(spec.Args[key])
+		value, err := formatOperationArgValue(spec.Args[key], targetFile)
 		if err != nil {
 			return nil, fmt.Errorf("format --%s: %w", key, err)
 		}
@@ -157,10 +191,10 @@ func buildOperationArgv(spec operationSpec, targetFile string) ([]string, error)
 	return argv, nil
 }
 
-func formatOperationArgValue(v any) (string, error) {
+func formatOperationArgValue(v any, targetFile string) (string, error) {
 	switch x := v.(type) {
 	case string:
-		return x, nil
+		return resolveOperationPathTemplate(x, targetFile), nil
 	case bool:
 		if x {
 			return "true", nil
@@ -180,6 +214,13 @@ func formatOperationArgValue(v any) (string, error) {
 		}
 		return string(buf), nil
 	}
+}
+
+func resolveOperationPathTemplate(raw string, targetFile string) string {
+	if raw == "" {
+		return ""
+	}
+	return strings.ReplaceAll(raw, "{TARGET}", targetFile)
 }
 
 func equalBytesWithIgnoredOffsets(actual, expected []byte, ignored []operationIgnoreRange) (bool, error) {

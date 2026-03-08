@@ -1,0 +1,379 @@
+{
+  "argv": [
+    "blueprint",
+    "info",
+    "testdata/golden/parse/BP_WithFunctions.uasset"
+  ],
+  "expected": {
+    "blueprintExportCount": 1,
+    "blueprints": [
+      {
+        "classIndex": -7,
+        "className": "Blueprint",
+        "index": 1,
+        "objectName": "BP_WithFunctions",
+        "outerIndex": 0,
+        "properties": [
+          {
+            "arrayIndex": 0,
+            "flags": 0,
+            "name": "ParentClass",
+            "offset": 18453,
+            "size": 4,
+            "type": "ObjectProperty",
+            "value": {
+              "index": -6,
+              "resolved": "import:6:Actor"
+            },
+            "valueOffset": 18478
+          },
+          {
+            "arrayIndex": 0,
+            "flags": 0,
+            "name": "BlueprintSystemVersion",
+            "offset": 18482,
+            "size": 4,
+            "type": "IntProperty",
+            "value": 2,
+            "valueOffset": 18507
+          },
+          {
+            "arrayIndex": 0,
+            "flags": 0,
+            "name": "SimpleConstructionScript",
+            "offset": 18511,
+            "size": 4,
+            "type": "ObjectProperty",
+            "value": {
+              "index": 12,
+              "resolved": "export:12:SimpleConstructionScript_0"
+            },
+            "valueOffset": 18536
+          },
+          {
+            "arrayIndex": 0,
+            "flags": 0,
+            "name": "UbergraphPages",
+            "offset": 18540,
+            "size": 8,
+            "type": "ArrayProperty(ObjectProperty)",
+            "value": {
+              "arrayType": "ObjectProperty",
+              "value": [
+                {
+                  "type": "ObjectProperty",
+                  "value": {
+                    "index": 4,
+                    "resolved": "export:4:EventGraph"
+                  }
+                }
+              ]
+            },
+            "valueOffset": 18577
+          },
+          {
+            "arrayIndex": 0,
+            "flags": 0,
+            "name": "FunctionGraphs",
+            "offset": 18585,
+            "size": 8,
+            "type": "ArrayProperty(ObjectProperty)",
+            "value": {
+              "arrayType": "ObjectProperty",
+              "value": [
+                {
+                  "type": "ObjectProperty",
+                  "value": {
+                    "index": 5,
+                    "resolved": "export:5:UserConstructionScript"
+                  }
+                }
+              ]
+            },
+            "valueOffset": 18622
+          },
+          {
+            "arrayIndex": 0,
+            "flags": 0,
+            "name": "LastEditedDocuments",
+            "offset": 18630,
+            "size": 445,
+            "type": "ArrayProperty(StructProperty(EditedDocumentInfo(/Script/Engine)))",
+            "value": {
+              "arrayType": "StructProperty",
+              "value": [
+                {
+                  "type": "StructProperty",
+                  "value": {
+                    "structType": "EditedDocumentInfo",
+                    "value": {
+                      "EditedObjectPath": {
+                        "flags": 8,
+                        "offset": 0,
+                        "type": "StructProperty(SoftObjectPath(/Script/CoreUObject))",
+                        "typeNodes": [
+                          {
+                            "innerCount": 1,
+                            "name": "StructProperty"
+                          },
+                          {
+                            "innerCount": 1,
+                            "name": "SoftObjectPath"
+                          },
+                          {
+                            "innerCount": 0,
+                            "name": "/Script/CoreUObject"
+                          }
+                        ],
+                        "value": {
+                          "structType": "SoftObjectPath",
+                          "value": {
+                            "error": "soft object path index 0 out of range",
+                            "softObjectPathIndex": 0
+                          }
+                        }
+                      },
+                      "SavedViewOffset": {
+                        "flags": 8,
+                        "offset": 53,
+                        "type": "StructProperty(DeprecateSlateVector2D(/Script/SlateCore))",
+                        "typeNodes": [
+                          {
+                            "innerCount": 1,
+                            "name": "StructProperty"
+                          },
+                          {
+                            "innerCount": 1,
+                            "name": "DeprecateSlateVector2D"
+                          },
+                          {
+                            "innerCount": 0,
+                            "name": "/Script/SlateCore"
+                          }
+                        ],
+                        "value": {
+                          "structType": "DeprecateSlateVector2D",
+                          "value": {
+                            "rawBase64": "AAAAAAAAAAA=",
+                            "structType": "DeprecateSlateVector2D"
+                          }
+                        }
+                      },
+                      "SavedZoomAmount": {
+                        "flags": 0,
+                        "offset": 110,
+                        "type": "FloatProperty",
+                        "typeNodes": [
+                          {
+                            "innerCount": 0,
+                            "name": "FloatProperty"
+                          }
+                        ],
+                        "value": -1
+                      }
+                    }
+                  }
+                },
+                {
+                  "type": "StructProperty",
+                  "value": {
+                    "structType": "EditedDocumentInfo",
+                    "value": {
+                      "EditedObjectPath": {
+                        "flags": 8,
+                        "offset": 0,
+                        "type": "StructProperty(SoftObjectPath(/Script/CoreUObject))",
+                        "typeNodes": [
+                          {
+                            "innerCount": 1,
+                            "name": "StructProperty"
+                          },
+                          {
+                            "innerCount": 1,
+                            "name": "SoftObjectPath"
+                          },
+                          {
+                            "innerCount": 0,
+                            "name": "/Script/CoreUObject"
+                          }
+                        ],
+                        "value": {
+                          "structType": "SoftObjectPath",
+                          "value": {
+                            "error": "soft object path index 1 out of range",
+                            "softObjectPathIndex": 1
+                          }
+                        }
+                      },
+                      "SavedViewOffset": {
+                        "flags": 8,
+                        "offset": 53,
+                        "type": "StructProperty(DeprecateSlateVector2D(/Script/SlateCore))",
+                        "typeNodes": [
+                          {
+                            "innerCount": 1,
+                            "name": "StructProperty"
+                          },
+                          {
+                            "innerCount": 1,
+                            "name": "DeprecateSlateVector2D"
+                          },
+                          {
+                            "innerCount": 0,
+                            "name": "/Script/SlateCore"
+                          }
+                        ],
+                        "value": {
+                          "structType": "DeprecateSlateVector2D",
+                          "value": {
+                            "rawBase64": "AAAAAAAAAAA=",
+                            "structType": "DeprecateSlateVector2D"
+                          }
+                        }
+                      },
+                      "SavedZoomAmount": {
+                        "flags": 0,
+                        "offset": 110,
+                        "type": "FloatProperty",
+                        "typeNodes": [
+                          {
+                            "innerCount": 0,
+                            "name": "FloatProperty"
+                          }
+                        ],
+                        "value": -1
+                      }
+                    }
+                  }
+                },
+                {
+                  "type": "StructProperty",
+                  "value": {
+                    "structType": "EditedDocumentInfo",
+                    "value": {
+                      "EditedObjectPath": {
+                        "flags": 8,
+                        "offset": 0,
+                        "type": "StructProperty(SoftObjectPath(/Script/CoreUObject))",
+                        "typeNodes": [
+                          {
+                            "innerCount": 1,
+                            "name": "StructProperty"
+                          },
+                          {
+                            "innerCount": 1,
+                            "name": "SoftObjectPath"
+                          },
+                          {
+                            "innerCount": 0,
+                            "name": "/Script/CoreUObject"
+                          }
+                        ],
+                        "value": {
+                          "structType": "SoftObjectPath",
+                          "value": {
+                            "error": "soft object path index 2 out of range",
+                            "softObjectPathIndex": 2
+                          }
+                        }
+                      },
+                      "SavedViewOffset": {
+                        "flags": 8,
+                        "offset": 53,
+                        "type": "StructProperty(DeprecateSlateVector2D(/Script/SlateCore))",
+                        "typeNodes": [
+                          {
+                            "innerCount": 1,
+                            "name": "StructProperty"
+                          },
+                          {
+                            "innerCount": 1,
+                            "name": "DeprecateSlateVector2D"
+                          },
+                          {
+                            "innerCount": 0,
+                            "name": "/Script/SlateCore"
+                          }
+                        ],
+                        "value": {
+                          "structType": "DeprecateSlateVector2D",
+                          "value": {
+                            "rawBase64": "AAAAAAAAAAA=",
+                            "structType": "DeprecateSlateVector2D"
+                          }
+                        }
+                      },
+                      "SavedZoomAmount": {
+                        "flags": 0,
+                        "offset": 110,
+                        "type": "FloatProperty",
+                        "typeNodes": [
+                          {
+                            "innerCount": 0,
+                            "name": "FloatProperty"
+                          }
+                        ],
+                        "value": -1
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "valueOffset": 18691
+          },
+          {
+            "arrayIndex": 0,
+            "flags": 0,
+            "name": "GeneratedClass",
+            "offset": 19136,
+            "size": 4,
+            "type": "ObjectProperty",
+            "value": {
+              "index": 2,
+              "resolved": "export:2:BP_WithFunctions_C"
+            },
+            "valueOffset": 19161
+          },
+          {
+            "arrayIndex": 0,
+            "flags": 0,
+            "name": "bLegacyNeedToPurgeSkelRefs",
+            "offset": 19165,
+            "size": 0,
+            "type": "BoolProperty",
+            "value": false,
+            "valueOffset": 19190
+          },
+          {
+            "arrayIndex": 0,
+            "flags": 8,
+            "name": "BlueprintGuid",
+            "offset": 19190,
+            "size": 16,
+            "type": "StructProperty(Guid(/Script/CoreUObject))",
+            "value": {
+              "structType": "Guid",
+              "value": "44a8dcb1-d88b-483c-b68b-44af49aca94f"
+            },
+            "valueOffset": 19239
+          }
+        ],
+        "serial": {
+          "offset": 18452,
+          "scriptSerializationEnd": 811,
+          "scriptSerializationStart": 0,
+          "size": 815
+        },
+        "superIndex": 0,
+        "warnings": null
+      }
+    ],
+    "file": "testdata/golden/parse/BP_WithFunctions.uasset",
+    "functionExportCount": 2
+  },
+  "generatedAt": "2026-03-06T17:08:06Z",
+  "generatedBy": "scripts/gen_expected_output",
+  "name": "blueprint_info_BP_WithFunctions",
+  "oracle": "ue-fixture"
+}

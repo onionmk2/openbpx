@@ -1,0 +1,9 @@
+{
+  "command": "name remove",
+  "args": {
+    "index": "103"
+  },
+  "ue_procedure": "Remove one safe unicode tail NameMap entry",
+  "expect": "byte_equal",
+  "notes": "Low-level unicode NameMap tail removal fixture."
+}

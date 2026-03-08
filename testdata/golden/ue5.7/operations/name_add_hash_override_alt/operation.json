@@ -1,0 +1,11 @@
+{
+  "command": "name add",
+  "args": {
+    "value": "BPX_ManualHashAlt",
+    "non-case-hash": "4321",
+    "case-preserving-hash": "8765"
+  },
+  "ue_procedure": "Append one NameMap entry with alternate explicit stored hashes",
+  "expect": "byte_equal",
+  "notes": "Low-level NameMap append fixture with alternate hash override."
+}

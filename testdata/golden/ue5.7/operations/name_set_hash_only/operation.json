@@ -1,0 +1,12 @@
+{
+  "command": "name set",
+  "args": {
+    "index": "1",
+    "value": "/Script/CoreUObject",
+    "non-case-hash": "1111",
+    "case-preserving-hash": "2222"
+  },
+  "ue_procedure": "Update one NameMap entry hash fields without changing stored text",
+  "expect": "byte_equal",
+  "notes": "Low-level NameMap hash-only rewrite fixture."
+}

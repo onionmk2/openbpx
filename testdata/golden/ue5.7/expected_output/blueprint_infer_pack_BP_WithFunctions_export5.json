@@ -1,0 +1,30 @@
+{
+  "argv": [
+    "blueprint",
+    "infer-pack",
+    "testdata/golden/parse/BP_WithFunctions.uasset",
+    "--export",
+    "5",
+    "--out",
+    "testdata/reports/infer_pack_fixture"
+  ],
+  "expected": {
+    "callsiteCount": 0,
+    "cfgBlockCount": 1,
+    "entrypoint": -1,
+    "export": 5,
+    "file": "testdata/golden/parse/BP_WithFunctions.uasset",
+    "instructionCount": 1,
+    "objectName": "UserConstructionScript",
+    "outDir": "testdata/reports/infer_pack_fixture",
+    "overallConfidence": "low",
+    "rangeConfidence": "low",
+    "rangeScore": 7,
+    "rangeSource": "serial-full",
+    "selectedEntrypoint": 0
+  },
+  "generatedAt": "2026-03-06T17:08:06Z",
+  "generatedBy": "scripts/gen_expected_output",
+  "name": "blueprint_infer_pack_BP_WithFunctions_export5",
+  "oracle": "ue-fixture"
+}

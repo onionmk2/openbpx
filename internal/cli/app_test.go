@@ -7,7 +7,6 @@ import (
 	"flag"
 	"io"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
@@ -177,7 +176,7 @@ func TestRunVersionPrintsSemanticVersion(t *testing.T) {
 	if stderr.Len() != 0 {
 		t.Fatalf("unexpected stderr: %s", stderr.String())
 	}
-	if got, want := strings.TrimSpace(stdout.String()), "0.1.7"; got != want {
+	if got, want := strings.TrimSpace(stdout.String()), "0.1.8"; got != want {
 		t.Fatalf("version: got %q want %q", got, want)
 	}
 }
@@ -192,7 +191,7 @@ func TestRunVersionAliasPrintsSemanticVersion(t *testing.T) {
 	if stderr.Len() != 0 {
 		t.Fatalf("unexpected stderr: %s", stderr.String())
 	}
-	if got, want := strings.TrimSpace(stdout.String()), "0.1.7"; got != want {
+	if got, want := strings.TrimSpace(stdout.String()), "0.1.8"; got != want {
 		t.Fatalf("version alias: got %q want %q", got, want)
 	}
 }
@@ -257,6 +256,12 @@ func TestRunHelpFindShowsPatternOnSummary(t *testing.T) {
 	if !strings.Contains(out, "bpx find summary <directory> [--pattern \"*.uasset\"]") {
 		t.Fatalf("expected find summary pattern usage, got: %s", out)
 	}
+	if !strings.Contains(out, "For map-only scans, pass `--pattern \"*.umap\"`.") {
+		t.Fatalf("expected umap pattern behavior note, got: %s", out)
+	}
+	if !strings.Contains(out, "`summary` continues when per-file parse fails and reports `parseFailures`.") {
+		t.Fatalf("expected parseFailures behavior note, got: %s", out)
+	}
 }
 
 func TestRunHelpImportShowsPatternOnGraph(t *testing.T) {
@@ -272,6 +277,25 @@ func TestRunHelpImportShowsPatternOnGraph(t *testing.T) {
 	out := stdout.String()
 	if !strings.Contains(out, "bpx import graph <directory> [--pattern \"*.uasset\"]") {
 		t.Fatalf("expected import graph pattern usage, got: %s", out)
+	}
+}
+
+func TestRunHelpPackageShowsReverseDependsFlag(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := Run([]string{"help", "package"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code: got %d want 0", code)
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("unexpected stderr: %s", stderr.String())
+	}
+	out := stdout.String()
+	if !strings.Contains(out, "bpx package depends <file.uasset> [--reverse]") {
+		t.Fatalf("expected package depends reverse usage, got: %s", out)
+	}
+	if !strings.Contains(out, "`depends --reverse`: adds reverse dependency view") {
+		t.Fatalf("expected package reverse behavior detail, got: %s", out)
 	}
 }
 
@@ -294,6 +318,28 @@ func TestRunHelpPropShowsBehaviorDetails(t *testing.T) {
 	}
 	if !strings.Contains(out, "`remove`: removes a property at --path.") {
 		t.Fatalf("expected prop remove behavior detail, got: %s", out)
+	}
+	if !strings.Contains(out, "Write subcommands report old/new values, size deltas, and changed-byte status.") {
+		t.Fatalf("expected prop write response behavior detail, got: %s", out)
+	}
+}
+
+func TestRunHelpValidateShowsExitCodeDetails(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := Run([]string{"help", "validate"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code: got %d want 0", code)
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("unexpected stderr: %s", stderr.String())
+	}
+	out := stdout.String()
+	if !strings.Contains(out, "Returns exit code 2 when validation result is not OK.") {
+		t.Fatalf("expected validate exit code behavior detail, got: %s", out)
+	}
+	if !strings.Contains(out, "Validation details are emitted in `result` payload.") {
+		t.Fatalf("expected validate payload behavior detail, got: %s", out)
 	}
 }
 
@@ -426,6 +472,21 @@ func TestRunLevelInfoAcceptsFlags(t *testing.T) {
 	}
 }
 
+func TestRunLevelActorSearchAcceptsFlags(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := Run([]string{"level", "actor-search", "/tmp/nonexistent.umap", "--actor-class", "LyraWorldSettings", "--actor-label", "Main"}, &stdout, &stderr)
+	if code != 1 {
+		t.Fatalf("exit code: got %d want 1", code)
+	}
+	if strings.Contains(stderr.String(), "usage: bpx level actor-search") {
+		t.Fatalf("unexpected usage error, flags likely not parsed: %s", stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "read file") {
+		t.Fatalf("expected file read failure, got: %s", stderr.String())
+	}
+}
+
 func TestRunLevelLegacyFormsAreRejected(t *testing.T) {
 	tests := []struct {
 		name string
@@ -456,6 +517,21 @@ func TestRunLevelLegacyFormsAreRejected(t *testing.T) {
 				t.Fatalf("expected unknown level command error, got: %s", stderr.String())
 			}
 		})
+	}
+}
+
+func TestRunMaterialReadAcceptsFlags(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := Run([]string{"material", "read", "/tmp/nonexistent.uasset", "--export", "1", "--include-hlsl=false", "--children-root", "/tmp", "--parent", "M_Master", "--pattern", "*.uasset", "--recursive=false", "--limit", "3"}, &stdout, &stderr)
+	if code != 1 {
+		t.Fatalf("exit code: got %d want 1", code)
+	}
+	if strings.Contains(stderr.String(), "usage: bpx material read") {
+		t.Fatalf("unexpected usage error, flags likely not parsed: %s", stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "read file") {
+		t.Fatalf("expected file read failure, got: %s", stderr.String())
 	}
 }
 
@@ -499,7 +575,7 @@ func TestRunBlueprintDisasmRejectsUnsupportedFormat(t *testing.T) {
 }
 
 func TestRunInfoSupportsTOMLFormat(t *testing.T) {
-	fixture := filepath.Join("..", "..", "testdata", "golden", "parse", "BP_Empty.uasset")
+	fixture := goldenParseFixturePath(t, "BP_Empty.uasset")
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
@@ -523,7 +599,7 @@ func TestRunInfoSupportsTOMLFormat(t *testing.T) {
 }
 
 func TestRunBlueprintDisasmDefaultFormatIsJSON(t *testing.T) {
-	fixture := filepath.Join("..", "..", "testdata", "golden", "parse", "BP_WithFunctions.uasset")
+	fixture := goldenParseFixturePath(t, "BP_WithFunctions.uasset")
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
@@ -612,6 +688,72 @@ func TestRunBlueprintRefsAcceptsFlags(t *testing.T) {
 	}
 	if !strings.Contains(stderr.String(), "read file") {
 		t.Fatalf("expected file read failure, got: %s", stderr.String())
+	}
+}
+
+func TestRunPackageDependsAcceptsReverseFlag(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := Run([]string{"package", "depends", "/tmp/nonexistent.uasset", "--reverse"}, &stdout, &stderr)
+	if code != 1 {
+		t.Fatalf("exit code: got %d want 1", code)
+	}
+	if strings.Contains(stderr.String(), "usage: bpx package depends") {
+		t.Fatalf("unexpected usage error, --reverse flag likely not parsed: %s", stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "read file") {
+		t.Fatalf("expected file read failure, got: %s", stderr.String())
+	}
+}
+
+func TestRunPackageDependsReverseIncludesBackReferences(t *testing.T) {
+	fixture := goldenParseFixturePath(t, "BP_DependsMap.uasset")
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := Run([]string{"package", "depends", fixture, "--reverse"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code: got %d want 0 (stderr=%s)", code, stderr.String())
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("unexpected stderr: %s", stderr.String())
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(stdout.Bytes(), &payload); err != nil {
+		t.Fatalf("parse json output: %v\n%s", err, stdout.String())
+	}
+	reverseRaw, ok := payload["reverseDependsMap"].([]any)
+	if !ok {
+		t.Fatalf("reverseDependsMap missing or invalid: %T", payload["reverseDependsMap"])
+	}
+	if len(reverseRaw) == 0 {
+		t.Fatalf("reverseDependsMap must not be empty")
+	}
+
+	findByExport := func(items []any, export int) map[string]any {
+		for _, item := range items {
+			m, ok := item.(map[string]any)
+			if !ok {
+				continue
+			}
+			value, ok := m["export"].(float64)
+			if !ok {
+				continue
+			}
+			if int(value) == export {
+				return m
+			}
+		}
+		return nil
+	}
+
+	entry := findByExport(reverseRaw, 6)
+	if entry == nil {
+		t.Fatalf("reverseDependsMap missing export=6 entry")
+	}
+	if got := int(entry["dependentCount"].(float64)); got != 2 {
+		t.Fatalf("dependentCount for export=6: got %d want 2", got)
 	}
 }
 

@@ -11,12 +11,6 @@ import (
 )
 
 func TestOperationFixtureDiversity(t *testing.T) {
-	operationsDir := filepath.Join("..", "..", "testdata", "golden", "operations")
-	entries, err := os.ReadDir(operationsDir)
-	if err != nil {
-		t.Fatalf("read operations dir: %v", err)
-	}
-
 	required := []string{
 		"prop_set_string_same_len",
 		"prop_set_string_diff_len",
@@ -30,92 +24,108 @@ func TestOperationFixtureDiversity(t *testing.T) {
 		"prop_set_array_replace_longer",
 		"prop_set_array_replace_empty",
 	}
-	present := map[string]bool{}
 
-	dirs := make([]string, 0, len(entries))
-	for _, entry := range entries {
-		if entry.IsDir() {
-			dirs = append(dirs, filepath.Join(operationsDir, entry.Name()))
-		}
-	}
-	sort.Strings(dirs)
-
-	type runResult struct {
-		ByteDelta int `json:"byteDelta"`
+	roots := goldenFixtureRoots(t, "operations")
+	if len(roots) == 0 {
+		t.Fatalf("no operations fixture roots found")
 	}
 
-	var zeroCount, positiveCount, negativeCount int
-	for _, opDir := range dirs {
-		specPath := filepath.Join(opDir, "operation.json")
-		beforePath := filepath.Join(opDir, "before.uasset")
+	for _, root := range roots {
+		root := root
+		t.Run(filepath.Base(root), func(t *testing.T) {
+			operationsDir := filepath.Join(root, "operations")
+			entries, err := os.ReadDir(operationsDir)
+			if err != nil {
+				t.Fatalf("read operations dir: %v", err)
+			}
 
-		specBytes, err := os.ReadFile(specPath)
-		if err != nil {
-			t.Fatalf("read operation spec: %v", err)
-		}
-		var spec operationSpec
-		if err := json.Unmarshal(specBytes, &spec); err != nil {
-			t.Fatalf("parse operation spec: %v", err)
-		}
-		if strings.TrimSpace(spec.Command) != "prop set" {
-			continue
-		}
-		if strings.TrimSpace(spec.Expect) != "byte_equal" {
-			continue
-		}
+			present := map[string]bool{}
+			dirs := make([]string, 0, len(entries))
+			for _, entry := range entries {
+				if entry.IsDir() {
+					dirs = append(dirs, filepath.Join(operationsDir, entry.Name()))
+				}
+			}
+			sort.Strings(dirs)
 
-		opName := filepath.Base(opDir)
-		present[opName] = true
+			type runResult struct {
+				ByteDelta int `json:"byteDelta"`
+			}
 
-		beforeBytes, err := os.ReadFile(beforePath)
-		if err != nil {
-			t.Fatalf("read before fixture: %v", err)
-		}
-		tempDir := t.TempDir()
-		target := filepath.Join(tempDir, "work.uasset")
-		if err := os.WriteFile(target, beforeBytes, 0o644); err != nil {
-			t.Fatalf("write temp fixture: %v", err)
-		}
+			var zeroCount, positiveCount, negativeCount int
+			for _, opDir := range dirs {
+				specPath := filepath.Join(opDir, "operation.json")
+				beforePath := filepath.Join(opDir, "before.uasset")
 
-		argv, err := buildOperationArgv(spec, target)
-		if err != nil {
-			t.Fatalf("build operation argv: %v", err)
-		}
+				specBytes, err := os.ReadFile(specPath)
+				if err != nil {
+					t.Fatalf("read operation spec: %v", err)
+				}
+				var spec operationSpec
+				if err := json.Unmarshal(specBytes, &spec); err != nil {
+					t.Fatalf("parse operation spec: %v", err)
+				}
+				if strings.TrimSpace(spec.Command) != "prop set" {
+					continue
+				}
+				if strings.TrimSpace(spec.Expect) != "byte_equal" {
+					continue
+				}
 
-		var stdout bytes.Buffer
-		var stderr bytes.Buffer
-		code := Run(argv, &stdout, &stderr)
-		if code != 0 {
-			t.Fatalf("operation command failed (code=%d): op=%s argv=%v stderr=%s", code, opName, argv, stderr.String())
-		}
+				opName := filepath.Base(opDir)
+				present[opName] = true
 
-		var result runResult
-		if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
-			t.Fatalf("parse operation output JSON for %s: %v", opName, err)
-		}
-		switch {
-		case result.ByteDelta == 0:
-			zeroCount++
-		case result.ByteDelta > 0:
-			positiveCount++
-		default:
-			negativeCount++
-		}
-	}
+				beforeBytes, err := os.ReadFile(beforePath)
+				if err != nil {
+					t.Fatalf("read before fixture: %v", err)
+				}
+				tempDir := t.TempDir()
+				target := filepath.Join(tempDir, "work.uasset")
+				if err := os.WriteFile(target, beforeBytes, 0o644); err != nil {
+					t.Fatalf("write temp fixture: %v", err)
+				}
 
-	for _, name := range required {
-		if !present[name] {
-			t.Fatalf("required diversity fixture is missing: %s", name)
-		}
-	}
+				argv, err := buildOperationArgv(spec, target)
+				if err != nil {
+					t.Fatalf("build operation argv: %v", err)
+				}
 
-	if zeroCount < 8 {
-		t.Fatalf("insufficient fixed-length coverage: zero byteDelta ops=%d", zeroCount)
-	}
-	if positiveCount < 4 {
-		t.Fatalf("insufficient growing variable-length coverage: positive byteDelta ops=%d", positiveCount)
-	}
-	if negativeCount < 3 {
-		t.Fatalf("insufficient shrinking variable-length coverage: negative byteDelta ops=%d", negativeCount)
+				var stdout bytes.Buffer
+				var stderr bytes.Buffer
+				code := Run(argv, &stdout, &stderr)
+				if code != 0 {
+					t.Fatalf("operation command failed (code=%d): op=%s argv=%v stderr=%s", code, opName, argv, stderr.String())
+				}
+
+				var result runResult
+				if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
+					t.Fatalf("parse operation output JSON for %s: %v", opName, err)
+				}
+				switch {
+				case result.ByteDelta == 0:
+					zeroCount++
+				case result.ByteDelta > 0:
+					positiveCount++
+				default:
+					negativeCount++
+				}
+			}
+
+			for _, name := range required {
+				if !present[name] {
+					t.Fatalf("required diversity fixture is missing: %s", name)
+				}
+			}
+
+			if zeroCount < 8 {
+				t.Fatalf("insufficient fixed-length coverage: zero byteDelta ops=%d", zeroCount)
+			}
+			if positiveCount < 4 {
+				t.Fatalf("insufficient growing variable-length coverage: positive byteDelta ops=%d", positiveCount)
+			}
+			if negativeCount < 3 {
+				t.Fatalf("insufficient shrinking variable-length coverage: negative byteDelta ops=%d", negativeCount)
+			}
+		})
 	}
 }

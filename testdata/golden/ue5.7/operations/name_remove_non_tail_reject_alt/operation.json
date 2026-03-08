@@ -1,0 +1,10 @@
+{
+  "command": "name remove",
+  "args": {
+    "index": "5"
+  },
+  "ue_procedure": "Reject alternate non-tail NameMap removal",
+  "expect": "error_equal",
+  "error_contains": "tail entry only",
+  "notes": "NameMap remove must reject alternate non-tail indices."
+}

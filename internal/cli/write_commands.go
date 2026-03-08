@@ -113,6 +113,34 @@ func runPropSet(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "error: rewrite asset: %v\n", err)
 		return 1
 	}
+	updatedAsset, err := uasset.ParseBytes(outBytes, *opts)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: reparse rewritten asset: %v\n", err)
+		return 1
+	}
+	rootValue := editResult.NewValue
+	if strings.TrimSpace(editResult.Path) != strings.TrimSpace(editResult.PropertyName) {
+		rootValue, err = decodeExportRootPropertyValue(updatedAsset, idx, editResult.PropertyName)
+		if err != nil {
+			fmt.Fprintf(stderr, "error: decode rewritten root property: %v\n", err)
+			return 1
+		}
+	}
+	outBytes, _, err = rewriteAssetRegistryValueChange(updatedAsset, editResult.PropertyName, rootValue, editResult.OldValue, editResult.NewValue)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: rewrite asset registry search data: %v\n", err)
+		return 1
+	}
+	updatedAsset, err = uasset.ParseBytes(outBytes, *opts)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: reparse asset after asset registry rewrite: %v\n", err)
+		return 1
+	}
+	outBytes, _, err = compactPropertyWriteNameMap(updatedAsset, editResult.OldValue, editResult.NewValue, *opts)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: compact property write name map: %v\n", err)
+		return 1
+	}
 	changed := !bytes.Equal(asset.Raw.Bytes, outBytes)
 
 	resp := map[string]any{
@@ -434,6 +462,26 @@ func runVarSetDefault(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "error: rewrite asset: %v\n", err)
 		return 1
 	}
+	updatedAsset, err := uasset.ParseBytes(outBytes, *opts)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: reparse rewritten asset: %v\n", err)
+		return 1
+	}
+	outBytes, _, err = rewriteAssetRegistryValueChange(updatedAsset, editResult.PropertyName, editResult.NewValue, editResult.OldValue, editResult.NewValue)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: rewrite asset registry search data: %v\n", err)
+		return 1
+	}
+	updatedAsset, err = uasset.ParseBytes(outBytes, *opts)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: reparse asset after asset registry rewrite: %v\n", err)
+		return 1
+	}
+	outBytes, _, err = compactPropertyWriteNameMap(updatedAsset, editResult.OldValue, editResult.NewValue, *opts)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: compact property write name map: %v\n", err)
+		return 1
+	}
 	changed := !bytes.Equal(asset.Raw.Bytes, outBytes)
 
 	resp := map[string]any{
@@ -530,6 +578,10 @@ func runLevelVarSet(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "error: %v\n", err)
 		return 1
 	}
+	if levelVarSetPathIsUnsupported(*path) {
+		fmt.Fprintf(stderr, "error: property path %q is not supported by level var-set because UE save also compacts related import/export/name state\n", strings.TrimSpace(*path))
+		return 1
+	}
 
 	editResult, err := edit.BuildPropertySetMutation(asset, targetExport, *path, *valueJSON)
 	if err != nil {
@@ -578,6 +630,15 @@ func runLevelVarSet(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 	return printJSON(stdout, resp)
+}
+
+func levelVarSetPathIsUnsupported(path string) bool {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return false
+	}
+	root, _, _ := strings.Cut(path, ".")
+	return strings.EqualFold(strings.TrimSpace(root), "NavigationSystemConfig")
 }
 
 func resolveLevelActorExportIndex(asset *uasset.Asset, selector string) (int, string, error) {
@@ -821,15 +882,105 @@ func collectDeclaredVariablesFromDecoded(decoded any) map[string]string {
 			}
 		}
 		if varTypeRaw, ok := fields["VarType"].(map[string]any); ok {
-			if t, ok := varTypeRaw["type"].(string); ok {
-				typeName = t
-			}
+			typeName = extractDeclaredVariableTypeFromDecoded(varTypeRaw)
 		}
 		if name != "" {
 			out[name] = typeName
 		}
 	}
 	return out
+}
+
+func extractDeclaredVariableTypeFromDecoded(varTypeRaw map[string]any) string {
+	if varTypeRaw == nil {
+		return ""
+	}
+
+	if rawType, _ := varTypeRaw["type"].(string); rawType != "" &&
+		!strings.HasPrefix(rawType, "StructProperty(EdGraphPinType") {
+		return rawType
+	}
+
+	valueMap, _ := varTypeRaw["value"].(map[string]any)
+	fields, _ := valueMap["value"].(map[string]any)
+	if len(fields) == 0 {
+		return ""
+	}
+
+	category := strings.TrimSpace(stringFromAny(fields["PinCategory"]))
+	if category == "" {
+		category = strings.TrimSpace(stringFromAny(fields["TerminalCategory"]))
+	}
+	if category == "" {
+		return ""
+	}
+
+	switch strings.ToLower(category) {
+	case "bool", "boolean":
+		return "BoolProperty"
+	case "byte":
+		return "ByteProperty"
+	case "int":
+		return "IntProperty"
+	case "int64":
+		return "Int64Property"
+	case "real", "float":
+		subCategory := strings.ToLower(strings.TrimSpace(stringFromAny(fields["PinSubCategory"])))
+		if subCategory == "double" {
+			return "DoubleProperty"
+		}
+		return "FloatProperty"
+	case "name":
+		return "NameProperty"
+	case "string":
+		return "StrProperty"
+	case "text":
+		return "TextProperty"
+	case "object":
+		return "ObjectProperty"
+	case "class":
+		return "ClassProperty"
+	case "struct":
+		structName := strings.TrimSpace(nameRefDisplayFromAny(fields["PinSubCategoryObject"]))
+		if structName == "" {
+			structName = strings.TrimSpace(nameRefDisplayFromAny(fields["TerminalSubCategoryObject"]))
+		}
+		if structName == "" {
+			return "StructProperty"
+		}
+		return fmt.Sprintf("StructProperty(%s)", structName)
+	default:
+		return ""
+	}
+}
+
+func stringFromAny(raw any) string {
+	switch v := raw.(type) {
+	case string:
+		return v
+	case map[string]any:
+		if s, ok := v["value"].(string); ok {
+			return s
+		}
+		if s, ok := v["name"].(string); ok {
+			return s
+		}
+	}
+	return ""
+}
+
+func nameRefDisplayFromAny(raw any) string {
+	m, ok := raw.(map[string]any)
+	if !ok {
+		return ""
+	}
+	if s, ok := m["name"].(string); ok {
+		return s
+	}
+	if s, ok := m["resolved"].(string); ok {
+		return s
+	}
+	return ""
 }
 
 func collectDeclaredVariablesFromRaw(asset *uasset.Asset, tag uasset.PropertyTag) (map[string]string, error) {
@@ -891,6 +1042,408 @@ func extractVariableNameFromTaggedStruct(asset *uasset.Asset, props []uasset.Pro
 		}
 	}
 	return ""
+}
+
+func decodeExportRootPropertyValue(asset *uasset.Asset, exportIndex int, rootName string) (any, error) {
+	if asset == nil {
+		return nil, fmt.Errorf("asset is nil")
+	}
+	if exportIndex < 0 || exportIndex >= len(asset.Exports) {
+		return nil, fmt.Errorf("export index out of range: %d", exportIndex+1)
+	}
+	rootName = strings.TrimSpace(rootName)
+	if rootName == "" {
+		return nil, fmt.Errorf("root property name is empty")
+	}
+
+	parsed := asset.ParseExportProperties(exportIndex)
+	for _, tag := range parsed.Properties {
+		if strings.TrimSpace(tag.Name.Display(asset.Names)) != rootName {
+			continue
+		}
+		value, ok := asset.DecodePropertyValue(tag)
+		if !ok {
+			return nil, fmt.Errorf("property %s is not decodable", rootName)
+		}
+		return value, nil
+	}
+	return nil, fmt.Errorf("property not found: %s", rootName)
+}
+
+func compactPropertyWriteNameMap(asset *uasset.Asset, oldValue, newValue any, opts uasset.ParseOptions) ([]byte, bool, error) {
+	candidates := obsoletePropertyWriteNameCandidates(oldValue, newValue)
+	return compactUnusedNames(asset, opts, candidates)
+}
+
+func compactUnusedNames(asset *uasset.Asset, opts uasset.ParseOptions, candidates []string) ([]byte, bool, error) {
+	if asset == nil {
+		return nil, false, fmt.Errorf("asset is nil")
+	}
+	if len(candidates) == 0 {
+		return append([]byte(nil), asset.Raw.Bytes...), false, nil
+	}
+
+	workingAsset := asset
+	workingBytes := append([]byte(nil), asset.Raw.Bytes...)
+	changed := false
+	for _, candidate := range candidates {
+		removeIdx := findNameIndex(workingAsset.Names, candidate)
+		if removeIdx < 0 {
+			continue
+		}
+		if countNameEntriesByValue(workingAsset.Names, candidate) != 1 {
+			continue
+		}
+		if propertyWriteNameStillReferenced(workingAsset, candidate) {
+			continue
+		}
+
+		updatedNames := make([]uasset.NameEntry, 0, len(workingAsset.Names)-1)
+		updatedNames = append(updatedNames, workingAsset.Names[:removeIdx]...)
+		updatedNames = append(updatedNames, workingAsset.Names[removeIdx+1:]...)
+
+		indexRemap := buildDeleteNameIndexRemap(len(workingAsset.Names), removeIdx)
+		outBytes, err := edit.RewriteImportExportNameRefs(workingAsset, indexRemap)
+		if err != nil {
+			return nil, changed, fmt.Errorf("rewrite import/export name refs removing %q: %w", candidate, err)
+		}
+
+		remappedAsset := *workingAsset
+		remappedAsset.Raw.Bytes = outBytes
+		remappedAsset.Names = updatedNames
+
+		exportMutations, err := edit.BuildExportNameRemapMutations(workingAsset, &remappedAsset, indexRemap, "", "")
+		if err != nil {
+			return nil, changed, fmt.Errorf("rewrite export payload name refs removing %q: %w", candidate, err)
+		}
+		if len(exportMutations) > 0 {
+			outBytes, err = edit.RewriteAsset(&remappedAsset, exportMutations)
+			if err != nil {
+				return nil, changed, fmt.Errorf("rewrite export payloads removing %q: %w", candidate, err)
+			}
+		}
+
+		remappedParsedAsset, err := uasset.ParseBytes(outBytes, opts)
+		if err != nil {
+			return nil, changed, fmt.Errorf("reparse asset before name map compaction removing %q: %w", candidate, err)
+		}
+		outBytes, err = edit.RewriteNameMap(remappedParsedAsset, updatedNames)
+		if err != nil {
+			return nil, changed, fmt.Errorf("rewrite name map removing %q: %w", candidate, err)
+		}
+		updatedAsset, err := uasset.ParseBytes(outBytes, opts)
+		if err != nil {
+			return nil, changed, fmt.Errorf("reparse compacted asset removing %q: %w", candidate, err)
+		}
+
+		workingAsset = updatedAsset
+		workingBytes = outBytes
+		changed = true
+	}
+	return workingBytes, changed, nil
+}
+
+func compactPropertyTagNameIfUnused(asset *uasset.Asset, opts uasset.ParseOptions, candidate string) ([]byte, bool, error) {
+	if asset == nil {
+		return nil, false, fmt.Errorf("asset is nil")
+	}
+	candidate = strings.TrimSpace(candidate)
+	if candidate == "" {
+		return append([]byte(nil), asset.Raw.Bytes...), false, nil
+	}
+	removeIdx := findNameIndex(asset.Names, candidate)
+	if removeIdx < 0 || countNameEntriesByValue(asset.Names, candidate) != 1 {
+		return append([]byte(nil), asset.Raw.Bytes...), false, nil
+	}
+	if propertyWriteNameStillReferencedWithoutAssetRegistry(asset, candidate) {
+		return append([]byte(nil), asset.Raw.Bytes...), false, nil
+	}
+
+	updatedNames := make([]uasset.NameEntry, 0, len(asset.Names)-1)
+	updatedNames = append(updatedNames, asset.Names[:removeIdx]...)
+	updatedNames = append(updatedNames, asset.Names[removeIdx+1:]...)
+
+	indexRemap := buildDeleteNameIndexRemap(len(asset.Names), removeIdx)
+	outBytes, err := edit.RewriteImportExportNameRefs(asset, indexRemap)
+	if err != nil {
+		return nil, false, fmt.Errorf("rewrite import/export name refs removing %q: %w", candidate, err)
+	}
+
+	remappedAsset := *asset
+	remappedAsset.Raw.Bytes = outBytes
+	remappedAsset.Names = updatedNames
+
+	exportMutations, err := edit.BuildExportNameRemapMutations(asset, &remappedAsset, indexRemap, "", "")
+	if err != nil {
+		return nil, false, fmt.Errorf("rewrite export payload name refs removing %q: %w", candidate, err)
+	}
+	if len(exportMutations) > 0 {
+		outBytes, err = edit.RewriteAsset(&remappedAsset, exportMutations)
+		if err != nil {
+			return nil, false, fmt.Errorf("rewrite export payloads removing %q: %w", candidate, err)
+		}
+	}
+
+	remappedParsedAsset, err := uasset.ParseBytes(outBytes, opts)
+	if err != nil {
+		return nil, false, fmt.Errorf("reparse asset before name map compaction removing %q: %w", candidate, err)
+	}
+	outBytes, err = edit.RewriteNameMap(remappedParsedAsset, updatedNames)
+	if err != nil {
+		return nil, false, fmt.Errorf("rewrite name map removing %q: %w", candidate, err)
+	}
+	return outBytes, true, nil
+}
+
+func obsoletePropertyWriteNameCandidates(oldValue, newValue any) []string {
+	oldEnum, newEnum, ok := propertyWriteEnumDisplayPair(oldValue, newValue)
+	if !ok {
+		return nil
+	}
+
+	out := make([]string, 0, 2)
+	seen := map[string]struct{}{}
+	add := func(value string) {
+		value = strings.TrimSpace(value)
+		if value == "" || value == newEnum {
+			return
+		}
+		if _, ok := seen[value]; ok {
+			return
+		}
+		seen[value] = struct{}{}
+		out = append(out, value)
+	}
+
+	add(oldEnum)
+	if shortOld, shortNew, ok := shortenEnumPair(oldEnum, newEnum); ok && shortOld != shortNew {
+		add(shortOld)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func propertyWriteEnumDisplayPair(oldValue, newValue any) (string, string, bool) {
+	oldMap, ok := oldValue.(map[string]any)
+	if !ok {
+		return "", "", false
+	}
+	newMap, ok := newValue.(map[string]any)
+	if !ok {
+		return "", "", false
+	}
+	oldEnum, oldOK := oldMap["enumType"].(string)
+	newEnum, newOK := newMap["enumType"].(string)
+	if !oldOK || !newOK || strings.TrimSpace(oldEnum) == "" || oldEnum != newEnum {
+		return "", "", false
+	}
+	oldRaw, oldOK := oldMap["value"].(string)
+	newRaw, newOK := newMap["value"].(string)
+	if !oldOK || !newOK {
+		return "", "", false
+	}
+	oldRaw = strings.TrimSpace(oldRaw)
+	newRaw = strings.TrimSpace(newRaw)
+	if oldRaw == "" || newRaw == "" || oldRaw == newRaw {
+		return "", "", false
+	}
+	return oldRaw, newRaw, true
+}
+
+func buildDeleteNameIndexRemap(nameCount int, removedIndex int32) map[int32]int32 {
+	remap := make(map[int32]int32, nameCount)
+	for i := 0; i < nameCount; i++ {
+		idx := int32(i)
+		switch {
+		case idx < removedIndex:
+			remap[idx] = idx
+		case idx > removedIndex:
+			remap[idx] = idx - 1
+		}
+	}
+	return remap
+}
+
+func countNameEntriesByValue(names []uasset.NameEntry, needle string) int {
+	needle = strings.TrimSpace(needle)
+	if needle == "" {
+		return 0
+	}
+	count := 0
+	for _, entry := range names {
+		if strings.TrimSpace(entry.Value) == needle {
+			count++
+		}
+	}
+	return count
+}
+
+func propertyWriteNameStillReferenced(asset *uasset.Asset, candidate string) bool {
+	if asset == nil {
+		return false
+	}
+	candidate = strings.TrimSpace(candidate)
+	if candidate == "" {
+		return false
+	}
+
+	for _, imp := range asset.Imports {
+		if strings.TrimSpace(imp.ClassPackage.Display(asset.Names)) == candidate ||
+			strings.TrimSpace(imp.ClassName.Display(asset.Names)) == candidate ||
+			strings.TrimSpace(imp.ObjectName.Display(asset.Names)) == candidate ||
+			strings.TrimSpace(imp.PackageName.Display(asset.Names)) == candidate {
+			return true
+		}
+	}
+	for _, exp := range asset.Exports {
+		if strings.TrimSpace(exp.ObjectName.Display(asset.Names)) == candidate {
+			return true
+		}
+	}
+
+	for exportIndex := range asset.Exports {
+		parsed := asset.ParseExportProperties(exportIndex)
+		for _, tag := range parsed.Properties {
+			if strings.TrimSpace(tag.Name.Display(asset.Names)) == candidate {
+				return true
+			}
+			for _, node := range tag.TypeNodes {
+				if strings.TrimSpace(node.Name.Display(asset.Names)) == candidate {
+					return true
+				}
+			}
+			value, ok := asset.DecodePropertyValue(tag)
+			if ok && decodedValueUsesName(value, candidate) {
+				return true
+			}
+		}
+	}
+
+	section, _, _, err := parseAssetRegistrySection(asset)
+	if err == nil && section != nil {
+		for _, obj := range section.Objects {
+			if strings.TrimSpace(obj.ObjectPath) == candidate || strings.TrimSpace(obj.ObjectClass) == candidate {
+				return true
+			}
+			for _, tag := range obj.Tags {
+				if strings.TrimSpace(tag.Key) == candidate || strings.Contains(tag.Value, candidate) {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+func propertyWriteNameStillReferencedWithoutAssetRegistry(asset *uasset.Asset, candidate string) bool {
+	if asset == nil {
+		return false
+	}
+	candidate = strings.TrimSpace(candidate)
+	if candidate == "" {
+		return false
+	}
+
+	for _, imp := range asset.Imports {
+		if strings.TrimSpace(imp.ClassPackage.Display(asset.Names)) == candidate ||
+			strings.TrimSpace(imp.ClassName.Display(asset.Names)) == candidate ||
+			strings.TrimSpace(imp.ObjectName.Display(asset.Names)) == candidate ||
+			strings.TrimSpace(imp.PackageName.Display(asset.Names)) == candidate {
+			return true
+		}
+	}
+	for _, exp := range asset.Exports {
+		if strings.TrimSpace(exp.ObjectName.Display(asset.Names)) == candidate {
+			return true
+		}
+	}
+	for exportIndex := range asset.Exports {
+		parsed := asset.ParseExportProperties(exportIndex)
+		for _, tag := range parsed.Properties {
+			if strings.TrimSpace(tag.Name.Display(asset.Names)) == candidate {
+				return true
+			}
+			for _, node := range tag.TypeNodes {
+				if strings.TrimSpace(node.Name.Display(asset.Names)) == candidate {
+					return true
+				}
+			}
+			value, ok := asset.DecodePropertyValue(tag)
+			if ok && decodedValueUsesName(value, candidate) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func decodedValueUsesName(value any, candidate string) bool {
+	candidate = strings.TrimSpace(candidate)
+	if candidate == "" {
+		return false
+	}
+
+	switch typed := value.(type) {
+	case map[string]any:
+		if name, ok := typed["name"].(string); ok && strings.TrimSpace(name) == candidate {
+			return true
+		}
+		if enumType, ok := typed["enumType"].(string); ok && strings.TrimSpace(enumType) != "" {
+			if raw, ok := typed["value"].(string); ok && strings.TrimSpace(raw) == candidate {
+				return true
+			}
+			if raw, ok := typed["value"].(string); ok && enumValueMatchesCandidate(enumType, raw, candidate) {
+				return true
+			}
+		}
+		for _, child := range typed {
+			if decodedValueUsesName(child, candidate) {
+				return true
+			}
+		}
+	case []any:
+		for _, child := range typed {
+			if decodedValueUsesName(child, candidate) {
+				return true
+			}
+		}
+	case []map[string]any:
+		for _, child := range typed {
+			if decodedValueUsesName(child, candidate) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func enumValueMatchesCandidate(enumType, raw, candidate string) bool {
+	enumType = strings.TrimSpace(enumType)
+	raw = strings.TrimSpace(raw)
+	candidate = strings.TrimSpace(candidate)
+	if raw == "" || candidate == "" {
+		return false
+	}
+	if raw == candidate {
+		return true
+	}
+	if parts := strings.SplitN(raw, "::", 2); len(parts) == 2 {
+		if strings.TrimSpace(parts[1]) == candidate {
+			return true
+		}
+	}
+	if parts := strings.SplitN(candidate, "::", 2); len(parts) == 2 {
+		if strings.TrimSpace(parts[1]) == raw {
+			return true
+		}
+	}
+	if enumType != "" && !strings.Contains(raw, "::") && candidate == enumType+"::"+raw {
+		return true
+	}
+	if enumType != "" && !strings.Contains(candidate, "::") && raw == enumType+"::"+candidate {
+		return true
+	}
+	return false
 }
 
 func createBackupFile(path string) error {

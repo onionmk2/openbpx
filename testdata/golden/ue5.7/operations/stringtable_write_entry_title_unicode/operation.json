@@ -1,0 +1,12 @@
+{
+	"command": "stringtable write-entry",
+	"args":
+	{
+		"export": "1",
+		"key": "LBL_TITLE",
+		"value": "テスト題名"
+	},
+	"ue_procedure": "Update title StringTable entry to unicode text",
+	"expect": "byte_equal",
+	"notes": "Serialized StringTable title unicode rewrite."
+}

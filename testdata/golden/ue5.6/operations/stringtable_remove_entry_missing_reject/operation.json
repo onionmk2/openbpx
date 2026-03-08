@@ -1,0 +1,12 @@
+{
+	"command": "stringtable remove-entry",
+	"args":
+	{
+		"export": "1",
+		"key": "BTN_MISSING"
+	},
+	"ue_procedure": "Reject string table entry removal when key is absent",
+	"expect": "error_equal",
+	"error_contains": "string table key not found",
+	"notes": "StringTable remove-entry must fail for missing keys."
+}

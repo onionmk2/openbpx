@@ -1,0 +1,19 @@
+{
+	"command": "enum write-value",
+	"args":
+	{
+		"export": "5",
+		"name": "FixtureEnumAnchorAlt",
+		"value": "BPXEnum_ValueB"
+	},
+	"ue_procedure": "Update existing alternate enum property value",
+	"expect": "byte_equal",
+	"notes": "Enum write-value fixture on FixtureEnumAnchorAlt.",
+	"ignore_offsets": [
+		{
+			"offset": 24,
+			"length": 20,
+			"reason": "ue-save-nondeterministic"
+		}
+	]
+}

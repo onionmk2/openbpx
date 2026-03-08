@@ -1,0 +1,12 @@
+{
+	"command": "stringtable write-entry",
+	"args":
+	{
+		"export": "1",
+		"key": "BTN_START",
+		"value": "Begin"
+	},
+	"ue_procedure": "Update BTN_START StringTable entry value",
+	"expect": "byte_equal",
+	"notes": "Serialized StringTable BTN_START rewrite."
+}

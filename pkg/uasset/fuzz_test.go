@@ -34,8 +34,8 @@ func FuzzRoundTrip(f *testing.F) {
 func seedFuzzInputs(f *testing.F) {
 	baseDir := filepath.Join("..", "..", "testdata")
 	patterns := []string{
-		filepath.Join(baseDir, "golden", "parse", "*.uasset"),
-		filepath.Join(baseDir, "golden", "parse", "*.umap"),
+		filepath.Join(baseDir, "golden", "*", "parse", "*.uasset"),
+		filepath.Join(baseDir, "golden", "*", "parse", "*.umap"),
 		filepath.Join(baseDir, "synthetic", "*.uasset"),
 		filepath.Join(baseDir, "synthetic", "*.bin"),
 	}

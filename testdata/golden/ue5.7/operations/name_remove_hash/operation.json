@@ -1,0 +1,9 @@
+{
+  "command": "name remove",
+  "args": {
+    "index": "103"
+  },
+  "ue_procedure": "Remove one safe ASCII tail NameMap entry after add",
+  "expect": "byte_equal",
+  "notes": "Low-level NameMap tail removal fixture for freshly added ASCII tail."
+}

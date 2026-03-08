@@ -16,7 +16,7 @@ import (
 func TestRunNameAddWritesEntryAndHashes(t *testing.T) {
 	dir := t.TempDir()
 	assetPath := filepath.Join(dir, "BP_Empty.uasset")
-	orig, err := os.ReadFile(filepath.Join("..", "..", "testdata", "golden", "parse", "BP_Empty.uasset"))
+	orig, err := os.ReadFile(goldenParseFixturePath(t, "BP_Empty.uasset"))
 	if err != nil {
 		t.Fatalf("read fixture: %v", err)
 	}

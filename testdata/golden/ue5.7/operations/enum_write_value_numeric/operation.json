@@ -1,0 +1,19 @@
+{
+	"command": "enum write-value",
+	"args":
+	{
+		"export": "5",
+		"name": "FixtureEnum",
+		"value": "1"
+	},
+	"ue_procedure": "Update existing enum property value by numeric literal",
+	"expect": "byte_equal",
+	"notes": "Covers enum write-value numeric variant.",
+	"ignore_offsets": [
+		{
+			"offset": 24,
+			"length": 20,
+			"reason": "ue-save-nondeterministic"
+		}
+	]
+}

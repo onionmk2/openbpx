@@ -26,13 +26,16 @@ const (
 	ue5VerseCells                     = int32(1015)
 	ue5PackageSavedHash               = int32(1016)
 	ue5OSSubObjectShadowSerialization = int32(1017)
+	ue5ImportTypeHierarchies          = int32(1018)
 	ue5NamesFromExportData            = int32(1001)
 	ue5PayloadTOC                     = int32(1002)
 
 	ue5MinimumKnown = int32(1000)
-	ue5MaximumKnown = int32(1017)
-	// UE5.6 uses UE4 file version 522 when writing package summaries.
+	ue5MaximumKnown = int32(1018)
+	// UE5.6/5.7 use UE4 file version 522 when writing package summaries.
 	ue4VersionUE56 = int32(522)
+	// Legacy unversioned-summary retry fallback for pre-5.7 layout.
+	ue5UnversionedFallback = ue5OSSubObjectShadowSerialization
 
 	maxTableEntries      = int32(1_000_000)
 	maxFStringBytes      = int64(16 * 1024 * 1024)
@@ -49,6 +52,11 @@ type Asset struct {
 
 	softObjectPathList       []softObjectPathEntry
 	softObjectPathListParsed bool
+}
+
+// SupportedUE5VersionWindow reports the accepted FileVersionUE5 range.
+func SupportedUE5VersionWindow() (min int32, max int32) {
+	return ue5MinimumKnown, ue5MaximumKnown
 }
 
 // Version returns Major.Minor string.

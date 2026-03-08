@@ -1,0 +1,9 @@
+{
+  "command": "name add",
+  "args": {
+    "value": "名前追加"
+  },
+  "ue_procedure": "Append one unicode NameMap entry",
+  "expect": "byte_equal",
+  "notes": "Low-level unicode NameMap append fixture."
+}

@@ -1,0 +1,11 @@
+{
+	"command": "var set-default",
+	"args":
+	{
+		"name": "VString",
+		"value": "\"golden\""
+	},
+	"ue_procedure": "Update string variable default value",
+	"expect": "byte_equal",
+	"notes": "Validated on ue5.6/ue5.7 scalar fixture roots."
+}

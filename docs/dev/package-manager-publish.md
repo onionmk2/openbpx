@@ -12,7 +12,9 @@ This document tracks how OpenBPX is published to package managers and how Skill 
 
 ## Current Installer Behavior
 
-- Users install manually via package manager instructions in `README.md`.
+- Linux users can run a one-command installer:
+  - `curl -fsSL https://raw.githubusercontent.com/wilddogjp/openbpx/main/scripts/install-bpx-from-release.sh | bash`
+- The installer resolves latest tag, downloads `.deb`, verifies `checksums.txt`, and installs via `dpkg`.
 
 ## Publish Targets
 
@@ -21,7 +23,7 @@ This document tracks how OpenBPX is published to package managers and how Skill 
 1. Update `packaging/homebrew/openbpx.rb` in this repository.
 2. Set release URL and SHA-256 for both macOS architectures.
 3. Verify:
-   - `brew install --formula https://raw.githubusercontent.com/wilddogjp/openbpx/main/packaging/homebrew/openbpx.rb`
+   - `HOMEBREW_DEVELOPER=1 brew install --formula https://raw.githubusercontent.com/wilddogjp/openbpx/main/packaging/homebrew/openbpx.rb`
    - `bpx version`
 
 ### Debian/Ubuntu (`dpkg`)
@@ -29,8 +31,7 @@ This document tracks how OpenBPX is published to package managers and how Skill 
 1. Build `.deb` assets on each release (`openbpx_<version>_<arch>.deb`).
 2. Attach `.deb` artifacts to the GitHub Release.
 3. Verify:
-   - `curl -fsSLO https://github.com/wilddogjp/openbpx/releases/download/vX.Y.Z/openbpx_X.Y.Z_amd64.deb`
-   - `sudo dpkg -i openbpx_X.Y.Z_amd64.deb`
+   - `OPENBPX_TAG=vX.Y.Z curl -fsSL https://raw.githubusercontent.com/wilddogjp/openbpx/main/scripts/install-bpx-from-release.sh | bash`
    - `bpx version`
 
 ### WinGet

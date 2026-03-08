@@ -1,0 +1,11 @@
+{
+	"command": "localization rewrite-namespace",
+	"args":
+	{
+		"from": "SCS",
+		"to": "HUD"
+	},
+	"ue_procedure": "Rewrite localization namespace across text sources to HUD",
+	"expect": "byte_equal",
+	"notes": "Namespace rewrite variant from SCS to HUD."
+}

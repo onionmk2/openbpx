@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/wilddogjp/openbpx/pkg/edit"
 	"github.com/wilddogjp/openbpx/pkg/uasset"
 )
 
@@ -32,6 +33,7 @@ const (
 
 	packageFlagFilterEditorOnly = uint32(0x80000000)
 	packageFlagUnversionedProps = uint32(0x00002000)
+	packageFlagRequiresLoc      = uint32(0x00040000)
 	packageFlagsShapeSensitive  = packageFlagFilterEditorOnly | packageFlagUnversionedProps
 )
 
@@ -183,6 +185,7 @@ func runPackageSetFlags(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "error: changing PKG_FilterEditorOnly or PKG_UnversionedProperties is not supported")
 		return 1
 	}
+	newFlags |= asset.Summary.PackageFlags & packageFlagRequiresLoc
 
 	outBytes, oldFlags, err := rewritePackageFlags(asset, newFlags)
 	if err != nil {
@@ -324,6 +327,9 @@ func rewritePackageFlags(asset *uasset.Asset, newFlags uint32) ([]byte, uint32, 
 		return nil, 0, fmt.Errorf("package flags position out of range")
 	}
 	order.PutUint32(out[flagPos:flagPos+4], newFlags)
+	if err := edit.FinalizePackageBytes(out, asset.Summary.FileVersionUE5); err != nil {
+		return nil, 0, fmt.Errorf("finalize package bytes: %w", err)
+	}
 	return out, oldFlags, nil
 }
 
@@ -420,9 +426,10 @@ func applyExportHeaderFields(asset *uasset.Asset, exportIndex int, fields map[st
 				return nil, nil, nil, fmt.Errorf("objectFlags: %w", err)
 			}
 			old := order.Uint32(out[pos.objectFlags : pos.objectFlags+4])
-			order.PutUint32(out[pos.objectFlags:pos.objectFlags+4], v)
+			patched := old | v
+			order.PutUint32(out[pos.objectFlags:pos.objectFlags+4], patched)
 			oldValues[key] = old
-			newValues[key] = v
+			newValues[key] = patched
 		case "forcedExport":
 			if err := patchBoolField(out, pos.forcedExport, order, raw, oldValues, newValues, key); err != nil {
 				return nil, nil, nil, err
@@ -480,6 +487,9 @@ func applyExportHeaderFields(asset *uasset.Asset, exportIndex int, fields map[st
 		default:
 			return nil, nil, nil, fmt.Errorf("unsupported export header field: %s", key)
 		}
+	}
+	if err := edit.FinalizePackageBytes(out, asset.Summary.FileVersionUE5); err != nil {
+		return nil, nil, nil, fmt.Errorf("finalize package bytes: %w", err)
 	}
 	return out, oldValues, newValues, nil
 }

@@ -1,0 +1,12 @@
+{
+	"command": "datatable update-row",
+	"args":
+	{
+		"row": "Row_A",
+		"values": "{\"Tags\":[\"TagA\",\"TagB\"]}"
+	},
+	"ue_procedure": "Attempt complex DataTable row update against scalar row schema",
+	"expect": "error_equal",
+	"error_contains": "property not found: Tags",
+	"notes": "Fixture now asserts explicit rejection with byte-identical output."
+}

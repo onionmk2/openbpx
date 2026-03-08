@@ -1,0 +1,11 @@
+{
+	"command": "stringtable set-namespace",
+	"args":
+	{
+		"export": "1",
+		"namespace": "UI.Menu"
+	},
+	"ue_procedure": "Set string table namespace to alternate ASCII value",
+	"expect": "byte_equal",
+	"notes": "Serialized StringTable alternate namespace rewrite."
+}

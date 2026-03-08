@@ -1,0 +1,11 @@
+{
+  "command": "name add",
+  "args": {
+    "value": "BPX_OpNameHash",
+    "non-case-hash": "1234",
+    "case-preserving-hash": "5678"
+  },
+  "ue_procedure": "Append one NameMap entry with explicit stored hashes",
+  "expect": "byte_equal",
+  "notes": "Low-level NameMap append fixture with hash override."
+}

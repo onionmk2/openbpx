@@ -1,0 +1,13 @@
+{
+	"command": "enum write-value",
+	"args":
+	{
+		"export": "5",
+		"name": "FixtureEnum",
+		"value": "BPXEnum_ValueC"
+	},
+	"ue_procedure": "Reject enum write-value when target enum name is missing from NameMap",
+	"expect": "error_equal",
+	"error_contains": "not present in NameMap",
+	"notes": "Enum write-value must fail when NameMap growth would be required."
+}

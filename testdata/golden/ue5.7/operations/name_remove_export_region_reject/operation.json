@@ -1,0 +1,10 @@
+{
+  "command": "name remove",
+  "args": {
+    "index": "10"
+  },
+  "ue_procedure": "Reject NameMap removal inside export-data reserved region",
+  "expect": "error_equal",
+  "error_contains": "tail entry only",
+  "notes": "NameMap remove must reject indices inside NamesReferencedFromExportDataCount."
+}

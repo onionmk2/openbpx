@@ -1,0 +1,25 @@
+{
+  "argv": [
+    "blueprint",
+    "refs",
+    "testdata/golden/parse/BP_Empty.uasset",
+    "--soft-path",
+    "/Game/BPXFixtures/Maps/L_TestTitle"
+  ],
+  "expected": {
+    "classFilter": "",
+    "eventNodeCount": 3,
+    "file": "testdata/golden/parse/BP_Empty.uasset",
+    "graphParseWarnings": [],
+    "includeRoutes": true,
+    "matchCount": 0,
+    "matches": [],
+    "maxDepth": 128,
+    "maxRoutes": 3,
+    "softPath": "/Game/BPXFixtures/Maps/L_TestTitle"
+  },
+  "generatedAt": "2026-03-06T17:08:06Z",
+  "generatedBy": "scripts/gen_expected_output",
+  "name": "blueprint_refs_BP_Empty_softpath_L_TestTitle",
+  "oracle": "ue-fixture"
+}

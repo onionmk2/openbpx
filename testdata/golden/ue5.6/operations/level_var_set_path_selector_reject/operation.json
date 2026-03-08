@@ -1,0 +1,12 @@
+{
+  "command": "level var-set",
+  "args": {
+    "actor": "PersistentLevel.Missing",
+    "path": "NavigationSystemConfig",
+    "value": "0"
+  },
+  "ue_procedure": "Reject level var-set when full object-path selector is absent",
+  "expect": "error_equal",
+  "error_contains": "not found under PersistentLevel",
+  "notes": "Level var-set must fail for missing full-path selectors."
+}

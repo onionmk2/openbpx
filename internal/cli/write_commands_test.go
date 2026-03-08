@@ -91,7 +91,7 @@ func TestRunVarSetDefaultDryRunUsesCDOExport(t *testing.T) {
 }
 
 func TestRunLevelVarListResolvesActorSelectorVariants(t *testing.T) {
-	mapPath := filepath.Join("..", "..", "testdata", "golden", "parse", "L_Minimal.umap")
+	mapPath := goldenParseFixturePath(t, "L_Minimal.umap")
 	selectors := []string{
 		"LyraWorldSettings",
 		"PersistentLevel.LyraWorldSettings",
@@ -126,7 +126,7 @@ func TestRunLevelVarListResolvesActorSelectorVariants(t *testing.T) {
 }
 
 func TestRunLevelVarListRejectsAmbiguousActorSelector(t *testing.T) {
-	mapPath := filepath.Join("..", "..", "testdata", "golden", "parse", "L_Minimal.umap")
+	mapPath := goldenParseFixturePath(t, "L_Minimal.umap")
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	code := Run([]string{"level", "var-list", mapPath, "--actor", "Polys"}, &stdout, &stderr)
@@ -141,7 +141,7 @@ func TestRunLevelVarListRejectsAmbiguousActorSelector(t *testing.T) {
 func TestRunLevelVarSetDryRunDoesNotWrite(t *testing.T) {
 	dir := t.TempDir()
 	assetPath := filepath.Join(dir, "L_Minimal.umap")
-	orig, err := os.ReadFile(filepath.Join("..", "..", "testdata", "golden", "parse", "L_Minimal.umap"))
+	orig, err := os.ReadFile(goldenParseFixturePath(t, "L_Minimal.umap"))
 	if err != nil {
 		t.Fatalf("read fixture: %v", err)
 	}
@@ -152,11 +152,11 @@ func TestRunLevelVarSetDryRunDoesNotWrite(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	code := Run([]string{"level", "var-set", assetPath, "--actor", "LyraWorldSettings", "--path", "NavigationSystemConfig", "--value", "0", "--dry-run"}, &stdout, &stderr)
-	if code != 0 {
-		t.Fatalf("exit code: got %d stderr=%s", code, stderr.String())
+	if code == 0 {
+		t.Fatalf("expected rejection for unsupported NavigationSystemConfig path")
 	}
-	if !strings.Contains(stdout.String(), `"dryRun": true`) {
-		t.Fatalf("dry-run response missing: %s", stdout.String())
+	if !strings.Contains(stderr.String(), "not supported by level var-set") {
+		t.Fatalf("stderr mismatch: %s", stderr.String())
 	}
 	after, err := os.ReadFile(assetPath)
 	if err != nil {
@@ -170,7 +170,7 @@ func TestRunLevelVarSetDryRunDoesNotWrite(t *testing.T) {
 func TestRunLevelVarSetBackupWritesBackupFile(t *testing.T) {
 	dir := t.TempDir()
 	assetPath := filepath.Join(dir, "L_Minimal.umap")
-	orig, err := os.ReadFile(filepath.Join("..", "..", "testdata", "golden", "parse", "L_Minimal.umap"))
+	orig, err := os.ReadFile(goldenParseFixturePath(t, "L_Minimal.umap"))
 	if err != nil {
 		t.Fatalf("read fixture: %v", err)
 	}
@@ -181,55 +181,23 @@ func TestRunLevelVarSetBackupWritesBackupFile(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	code := Run([]string{"level", "var-set", assetPath, "--actor", "LyraWorldSettings", "--path", "NavigationSystemConfig", "--value", "0", "--backup"}, &stdout, &stderr)
-	if code != 0 {
-		t.Fatalf("exit code: got %d stderr=%s", code, stderr.String())
+	if code == 0 {
+		t.Fatalf("expected rejection for unsupported NavigationSystemConfig path")
+	}
+	if !strings.Contains(stderr.String(), "not supported by level var-set") {
+		t.Fatalf("stderr mismatch: %s", stderr.String())
 	}
 
 	backupPath := assetPath + ".backup"
-	backup, err := os.ReadFile(backupPath)
+	if _, err := os.Stat(backupPath); !os.IsNotExist(err) {
+		t.Fatalf("backup file should not be created on rejected write")
+	}
+	after, err := os.ReadFile(assetPath)
 	if err != nil {
-		t.Fatalf("read backup: %v", err)
+		t.Fatalf("read fixture after rejected run: %v", err)
 	}
-	if !bytes.Equal(backup, orig) {
-		t.Fatalf("backup bytes mismatch")
-	}
-
-	var verifyStdout bytes.Buffer
-	var verifyStderr bytes.Buffer
-	verifyCode := Run([]string{"level", "var-list", assetPath, "--actor", "LyraWorldSettings"}, &verifyStdout, &verifyStderr)
-	if verifyCode != 0 {
-		t.Fatalf("verify command failed: code=%d stderr=%s", verifyCode, verifyStderr.String())
-	}
-
-	var payload map[string]any
-	if err := json.Unmarshal(verifyStdout.Bytes(), &payload); err != nil {
-		t.Fatalf("decode verify json: %v\nstdout=%s", err, verifyStdout.String())
-	}
-	propsRaw, ok := payload["properties"].([]any)
-	if !ok {
-		t.Fatalf("properties payload missing: %#v", payload["properties"])
-	}
-	found := false
-	for _, raw := range propsRaw {
-		prop, ok := raw.(map[string]any)
-		if !ok {
-			continue
-		}
-		if prop["name"] != "NavigationSystemConfig" {
-			continue
-		}
-		value, ok := prop["value"].(map[string]any)
-		if !ok {
-			t.Fatalf("navigation value missing: %#v", prop["value"])
-		}
-		if got, want := int(value["index"].(float64)), 0; got != want {
-			t.Fatalf("navigation index: got %d want %d", got, want)
-		}
-		found = true
-		break
-	}
-	if !found {
-		t.Fatalf("NavigationSystemConfig property not found in level vars output")
+	if !bytes.Equal(after, orig) {
+		t.Fatalf("rejected write modified source file")
 	}
 }
 
@@ -251,7 +219,7 @@ func TestCollectDeclaredVariablesFallbackParsesRawNewVariables(t *testing.T) {
 func TestRunPackageSetFlagsUpdatesSummary(t *testing.T) {
 	dir := t.TempDir()
 	assetPath := filepath.Join(dir, "sample.uasset")
-	orig, err := os.ReadFile(filepath.Join("..", "..", "testdata", "golden", "parse", "BP_Empty.uasset"))
+	orig, err := os.ReadFile(goldenParseFixturePath(t, "BP_Empty.uasset"))
 	if err != nil {
 		t.Fatalf("read fixture: %v", err)
 	}
@@ -270,7 +238,7 @@ func TestRunPackageSetFlagsUpdatesSummary(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse rewritten fixture: %v", err)
 	}
-	if got, want := asset.Summary.PackageFlags, uint32(0x20020000); got != want {
+	if got, want := asset.Summary.PackageFlags, uint32(0x20060000); got != want {
 		t.Fatalf("package flags: got 0x%08x want 0x%08x", got, want)
 	}
 }
@@ -278,7 +246,7 @@ func TestRunPackageSetFlagsUpdatesSummary(t *testing.T) {
 func TestRunPackageSetFlagsMasksTransientAndInMemoryFlags(t *testing.T) {
 	dir := t.TempDir()
 	assetPath := filepath.Join(dir, "sample.uasset")
-	orig, err := os.ReadFile(filepath.Join("..", "..", "testdata", "golden", "parse", "BP_Empty.uasset"))
+	orig, err := os.ReadFile(goldenParseFixturePath(t, "BP_Empty.uasset"))
 	if err != nil {
 		t.Fatalf("read fixture: %v", err)
 	}
@@ -297,7 +265,34 @@ func TestRunPackageSetFlagsMasksTransientAndInMemoryFlags(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse rewritten fixture: %v", err)
 	}
-	if got, want := asset.Summary.PackageFlags, uint32(0x00020000); got != want {
+	if got, want := asset.Summary.PackageFlags, uint32(0x00060000); got != want {
+		t.Fatalf("package flags: got 0x%08x want 0x%08x", got, want)
+	}
+}
+
+func TestRunPackageSetFlagsPreservesRequiresLocalizationGather(t *testing.T) {
+	dir := t.TempDir()
+	assetPath := filepath.Join(dir, "sample.uasset")
+	orig, err := os.ReadFile(goldenParseFixturePath(t, "BP_Empty.uasset"))
+	if err != nil {
+		t.Fatalf("read fixture: %v", err)
+	}
+	if err := os.WriteFile(assetPath, orig, 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := Run([]string{"package", "set-flags", assetPath, "--flags", "0"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code: got %d stderr=%s", code, stderr.String())
+	}
+
+	asset, err := uasset.ParseFile(assetPath, uasset.DefaultParseOptions())
+	if err != nil {
+		t.Fatalf("parse rewritten fixture: %v", err)
+	}
+	if got, want := asset.Summary.PackageFlags, uint32(0x00040000); got != want {
 		t.Fatalf("package flags: got 0x%08x want 0x%08x", got, want)
 	}
 }
@@ -327,7 +322,7 @@ func TestParsePackageFlagsValueUE56Names(t *testing.T) {
 func TestRunPackageSetFlagsRejectsShapeSensitiveBits(t *testing.T) {
 	dir := t.TempDir()
 	assetPath := filepath.Join(dir, "sample.uasset")
-	orig, err := os.ReadFile(filepath.Join("..", "..", "testdata", "golden", "parse", "BP_Empty.uasset"))
+	orig, err := os.ReadFile(goldenParseFixturePath(t, "BP_Empty.uasset"))
 	if err != nil {
 		t.Fatalf("read fixture: %v", err)
 	}
@@ -357,7 +352,7 @@ func TestRunPackageSetFlagsRejectsShapeSensitiveBits(t *testing.T) {
 func TestRunExportSetHeaderUpdatesObjectFlags(t *testing.T) {
 	dir := t.TempDir()
 	assetPath := filepath.Join(dir, "sample.uasset")
-	orig, err := os.ReadFile(filepath.Join("..", "..", "testdata", "golden", "parse", "BP_Empty.uasset"))
+	orig, err := os.ReadFile(goldenParseFixturePath(t, "BP_Empty.uasset"))
 	if err != nil {
 		t.Fatalf("read fixture: %v", err)
 	}
@@ -379,7 +374,7 @@ func TestRunExportSetHeaderUpdatesObjectFlags(t *testing.T) {
 	if len(asset.Exports) == 0 {
 		t.Fatalf("fixture has no exports after rewrite")
 	}
-	if got, want := asset.Exports[0].ObjectFlags, uint32(1); got != want {
+	if got, want := asset.Exports[0].ObjectFlags, uint32(11); got != want {
 		t.Fatalf("object flags: got 0x%08x want 0x%08x", got, want)
 	}
 }

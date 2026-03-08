@@ -1041,9 +1041,10 @@ func runLevel(args []string, stdout, stderr io.Writer) int {
 		args,
 		stdout,
 		stderr,
-		"usage: bpx level <info|var-list|var-set> ...",
+		"usage: bpx level <info|actor-search|var-list|var-set> ...",
 		"unknown level command: %s\n",
 		subcommandSpec{Name: "info", Run: runLevelInfo},
+		subcommandSpec{Name: "actor-search", Run: runLevelActorSearch},
 		subcommandSpec{Name: "var-list", Run: runLevelVarList},
 		subcommandSpec{Name: "var-set", Run: runLevelVarSet},
 	)

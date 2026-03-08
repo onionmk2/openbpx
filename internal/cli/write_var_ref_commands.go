@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"unicode"
 
 	"github.com/wilddogjp/openbpx/pkg/edit"
 	"github.com/wilddogjp/openbpx/pkg/uasset"
@@ -42,8 +43,14 @@ func runVarRename(args []string, stdout, stderr io.Writer) int {
 
 	declared, declWarnings := collectDeclaredVariables(asset)
 	declaredFrom := false
+	declaredType := ""
 	if _, ok := declared[fromName]; ok {
 		declaredFrom = true
+		declaredType = declared[fromName]
+	}
+	if !declaredFrom {
+		fmt.Fprintf(stderr, "error: declaration for %q was not found; refusing NameMap-only rename\n", fromName)
+		return 1
 	}
 	if _, ok := declared[toName]; ok {
 		fmt.Fprintf(stderr, "error: destination variable already exists in declarations: %s\n", toName)
@@ -51,16 +58,11 @@ func runVarRename(args []string, stdout, stderr io.Writer) int {
 	}
 
 	renameIndexes := make([]int, 0, 4)
-	updatedNames := append(make([]uasset.NameEntry, 0, len(asset.Names)), asset.Names...)
-	for i := range updatedNames {
-		if updatedNames[i].Value != fromName {
+	removedNames := make([]uasset.NameEntry, 0, len(asset.Names))
+	for i := range asset.Names {
+		if asset.Names[i].Value != fromName {
+			removedNames = append(removedNames, asset.Names[i])
 			continue
-		}
-		nonCaseHash, casePreservingHash := edit.ComputeNameEntryHashesUE56(toName)
-		updatedNames[i] = uasset.NameEntry{
-			Value:              toName,
-			NonCaseHash:        nonCaseHash,
-			CasePreservingHash: casePreservingHash,
 		}
 		renameIndexes = append(renameIndexes, i)
 	}
@@ -68,14 +70,71 @@ func runVarRename(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "error: variable name %q not found in NameMap\n", fromName)
 		return 1
 	}
-
-	if !declaredFrom {
-		declWarnings = append(declWarnings, fmt.Sprintf("declaration for %q was not found; applied NameMap-level rename", fromName))
+	nonCaseHash, casePreservingHash := edit.ComputeNameEntryHashesUE56(toName)
+	insertPos := len(removedNames)
+	for i := range removedNames {
+		if compareNameMapNamesFold(toName, removedNames[i].Value) < 0 {
+			insertPos = i
+			break
+		}
 	}
+	updatedNames := make([]uasset.NameEntry, 0, len(asset.Names))
+	updatedNames = append(updatedNames, removedNames[:insertPos]...)
+	updatedNames = append(updatedNames, uasset.NameEntry{
+		Value:              toName,
+		NonCaseHash:        nonCaseHash,
+		CasePreservingHash: casePreservingHash,
+	})
+	updatedNames = append(updatedNames, removedNames[insertPos:]...)
 
 	outBytes, err := edit.RewriteNameMap(asset, updatedNames)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: rewrite name map: %v\n", err)
+		return 1
+	}
+	updatedAsset, err := uasset.ParseBytes(outBytes, *opts)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: reparse renamed asset: %v\n", err)
+		return 1
+	}
+	indexRemap, err := edit.BuildNameIndexRemap(asset.Names, updatedAsset.Names)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: build name remap: %v\n", err)
+		return 1
+	}
+	outBytes, err = edit.RewriteImportExportNameRefs(updatedAsset, indexRemap)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: rewrite import/export name refs: %v\n", err)
+		return 1
+	}
+	updatedAsset, err = uasset.ParseBytes(outBytes, *opts)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: reparse remapped asset: %v\n", err)
+		return 1
+	}
+	isBoolVar := strings.EqualFold(strings.TrimSpace(declaredType), "BoolProperty")
+	displayFrom := blueprintNameToDisplayString(fromName, isBoolVar)
+	displayTo := blueprintNameToDisplayString(toName, isBoolVar)
+	exportMutations, err := edit.BuildExportNameRemapMutations(asset, updatedAsset, indexRemap, displayFrom, displayTo)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: rewrite export payload name refs: %v\n", err)
+		return 1
+	}
+	if len(exportMutations) > 0 {
+		outBytes, err = edit.RewriteAsset(updatedAsset, exportMutations)
+		if err != nil {
+			fmt.Fprintf(stderr, "error: rewrite export payloads: %v\n", err)
+			return 1
+		}
+		updatedAsset, err = uasset.ParseBytes(outBytes, *opts)
+		if err != nil {
+			fmt.Fprintf(stderr, "error: reparse export-rewritten asset: %v\n", err)
+			return 1
+		}
+	}
+	outBytes, _, err = rewriteAssetRegistryVarRename(updatedAsset, fromName, toName, isBoolVar)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: rewrite asset registry search data: %v\n", err)
 		return 1
 	}
 	changed := !bytes.Equal(asset.Raw.Bytes, outBytes)
@@ -105,6 +164,132 @@ func runVarRename(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 	return printJSON(stdout, resp)
+}
+
+func rewriteAssetRegistryVarRename(asset *uasset.Asset, fromName, toName string, isBoolVar bool) ([]byte, int, error) {
+	fromDisplay := blueprintNameToDisplayString(fromName, isBoolVar)
+	toDisplay := blueprintNameToDisplayString(toName, isBoolVar)
+	if fromDisplay == "" || fromDisplay == toDisplay {
+		return append([]byte(nil), asset.Raw.Bytes...), 0, nil
+	}
+	return rewriteAssetRegistryTextValues(asset, func(history map[string]any) int {
+		return replaceHistoryStrings(history, fromDisplay, toDisplay)
+	})
+}
+
+var blueprintDisplayNameArticles = []string{
+	"In",
+	"As",
+	"To",
+	"Or",
+	"At",
+	"On",
+	"If",
+	"Be",
+	"By",
+	"The",
+	"For",
+	"And",
+	"With",
+	"When",
+	"From",
+}
+
+func blueprintNameToDisplayString(name string, isBool bool) string {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return ""
+	}
+
+	runes := []rune(name)
+	out := make([]rune, 0, len(runes)+4)
+	inRun := false
+	wasSpace := false
+	wasOpenParen := false
+	wasNumber := false
+	wasMinusSign := false
+
+	for i, r := range runes {
+		isLower := unicode.IsLower(r)
+		isUpper := unicode.IsUpper(r)
+		isDigit := unicode.IsDigit(r)
+		isUnderscore := r == '_'
+
+		if i == 0 && isBool && r == 'b' && len(runes) > 1 && unicode.IsUpper(runes[1]) {
+			continue
+		}
+
+		if (isUpper || (isDigit && !wasMinusSign)) && !inRun && !wasOpenParen && !wasNumber {
+			if !wasSpace && len(out) > 0 {
+				out = append(out, ' ')
+				wasSpace = true
+			}
+			inRun = true
+		}
+
+		if isLower {
+			inRun = false
+		}
+
+		if isUnderscore {
+			r = ' '
+			inRun = true
+		}
+
+		if len(out) == 0 {
+			r = unicode.ToUpper(r)
+		} else if !isDigit && (wasSpace || wasOpenParen) {
+			if shouldLowercaseDisplayWordStart(runes, i) {
+				r = unicode.ToLower(r)
+			} else {
+				r = unicode.ToUpper(r)
+			}
+		}
+
+		out = append(out, r)
+		wasSpace = r == ' '
+		wasOpenParen = r == '('
+		wasMinusSign = r == '-'
+		isPotentialNumerical := wasMinusSign || r == '.'
+		wasNumber = isDigit || (wasNumber && isPotentialNumerical)
+	}
+
+	return string(out)
+}
+
+func compareNameMapNamesFold(a, b string) int {
+	foldA := strings.ToLower(a)
+	foldB := strings.ToLower(b)
+	if diff := strings.Compare(foldA, foldB); diff != 0 {
+		return diff
+	}
+	return strings.Compare(a, b)
+}
+
+func shouldLowercaseDisplayWordStart(runes []rune, start int) bool {
+	for _, article := range blueprintDisplayNameArticles {
+		if !displayWordHasExactPrefix(runes, start, article) {
+			continue
+		}
+		next := start + len([]rune(article))
+		if next < len(runes) && !unicode.IsLower(runes[next]) {
+			return true
+		}
+	}
+	return false
+}
+
+func displayWordHasExactPrefix(runes []rune, start int, word string) bool {
+	wordRunes := []rune(word)
+	if start+len(wordRunes) > len(runes) {
+		return false
+	}
+	for i, want := range wordRunes {
+		if runes[start+i] != want {
+			return false
+		}
+	}
+	return true
 }
 
 func runRef(args []string, stdout, stderr io.Writer) int {
@@ -187,7 +372,7 @@ func rewriteReferencesAsset(asset *uasset.Asset, opts uasset.ParseOptions, from,
 	}
 
 	workingAsset := asset
-	workingBytes := append([]byte(nil), asset.Raw.Bytes...)
+	var workingBytes []byte
 	warnings := make([]string, 0, 8)
 
 	nameMapRewrites := 0
@@ -221,6 +406,13 @@ func rewriteReferencesAsset(asset *uasset.Asset, opts uasset.ParseOptions, from,
 	for exportIdx := 0; exportIdx < len(workingAsset.Exports); exportIdx++ {
 		for {
 			props := workingAsset.ParseExportProperties(exportIdx)
+			if len(props.Warnings) > 0 {
+				return nil, 0, 0, nil, fmt.Errorf(
+					"cannot safely rewrite references in export %d: %s",
+					exportIdx+1,
+					strings.Join(props.Warnings, "; "),
+				)
+			}
 			mutated := false
 			for _, p := range props.Properties {
 				propName := p.Name.Display(workingAsset.Names)
@@ -239,13 +431,11 @@ func rewriteReferencesAsset(asset *uasset.Asset, opts uasset.ParseOptions, from,
 
 				valueJSON, err := marshalJSONValue(updated)
 				if err != nil {
-					warnings = append(warnings, fmt.Sprintf("export %d %s: marshal rewritten value: %v", exportIdx+1, propName, err))
-					continue
+					return nil, 0, 0, nil, fmt.Errorf("export %d %s: marshal rewritten value: %w", exportIdx+1, propName, err)
 				}
 				res, err := edit.BuildPropertySetMutation(workingAsset, exportIdx, propName, valueJSON)
 				if err != nil {
-					warnings = append(warnings, fmt.Sprintf("export %d %s: %v", exportIdx+1, propName, err))
-					continue
+					return nil, 0, 0, nil, fmt.Errorf("export %d %s: %w", exportIdx+1, propName, err)
 				}
 
 				workingBytes, err = edit.RewriteAsset(workingAsset, []edit.ExportMutation{res.Mutation})
@@ -266,6 +456,11 @@ func rewriteReferencesAsset(asset *uasset.Asset, opts uasset.ParseOptions, from,
 		}
 	}
 
+	assetRegistryBytes, _, err := rewriteAssetRegistryStringReplace(workingAsset, from, to)
+	if err != nil {
+		return nil, 0, 0, nil, fmt.Errorf("rewrite asset registry search data: %w", err)
+	}
+	workingBytes = assetRegistryBytes
 	return workingBytes, nameMapRewrites, propertyReplaceCount, warnings, nil
 }
 

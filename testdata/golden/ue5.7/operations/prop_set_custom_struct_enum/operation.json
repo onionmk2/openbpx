@@ -1,0 +1,12 @@
+{
+	"command": "prop set",
+	"args":
+	{
+		"export": 5,
+		"path": "FixtureCustom.EnumVal",
+		"value": "1"
+	},
+	"ue_procedure": "Set custom struct enum field via numeric literal",
+	"expect": "byte_equal",
+	"notes": "Covers custom struct enum re-encoding without requiring NameMap growth."
+}

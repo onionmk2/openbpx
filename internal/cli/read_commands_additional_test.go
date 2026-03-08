@@ -169,6 +169,7 @@ func TestNormalizePackageSectionName(t *testing.T) {
 		ok    bool
 	}{
 		{input: "soft-object-paths", want: "soft-object-paths", ok: true},
+		{input: "import-type-hierarchies", want: "import-type-hierarchies", ok: true},
 		{input: "softObjectPaths", want: "", ok: false},
 		{input: "asset_registry", want: "", ok: false},
 		{input: "bulk-data", want: "bulk-data", ok: true},
@@ -196,5 +197,64 @@ func TestRunPackageResolveIndexRejectsOutOfInt32Range(t *testing.T) {
 	}
 	if !strings.Contains(stderr.String(), "index out of int32 range") {
 		t.Fatalf("expected int32 range error, got: %s", stderr.String())
+	}
+}
+
+func TestBuildReverseDependsMap(t *testing.T) {
+	depends := []map[string]any{
+		{
+			"export":     1,
+			"exportName": "A",
+			"dependencies": []map[string]any{
+				{"index": 2},
+				{"index": 3},
+				{"index": 3},
+			},
+		},
+		{
+			"export":     2,
+			"exportName": "B",
+			"dependencies": []map[string]any{
+				{"index": 3},
+			},
+		},
+		{
+			"export":       3,
+			"exportName":   "C",
+			"dependencies": []map[string]any{},
+		},
+	}
+
+	reverse := buildReverseDependsMap(depends)
+	if len(reverse) != 3 {
+		t.Fatalf("reverse entry count: got %d want 3", len(reverse))
+	}
+
+	entry := reverse[2]
+	if got := entry["export"]; got != 3 {
+		t.Fatalf("third reverse export: got %v want 3", got)
+	}
+	if got := entry["dependentCount"]; got != 2 {
+		t.Fatalf("dependentCount: got %v want 2", got)
+	}
+
+	dependents, ok := entry["dependents"].([]map[string]any)
+	if !ok {
+		t.Fatalf("dependents type: got %T", entry["dependents"])
+	}
+	if len(dependents) != 2 {
+		t.Fatalf("dependent length: got %d want 2", len(dependents))
+	}
+	if got := dependents[0]["export"]; got != 1 {
+		t.Fatalf("first dependent export: got %v want 1", got)
+	}
+	if got := dependents[0]["referenceCount"]; got != 2 {
+		t.Fatalf("first dependent referenceCount: got %v want 2", got)
+	}
+	if got := dependents[1]["export"]; got != 2 {
+		t.Fatalf("second dependent export: got %v want 2", got)
+	}
+	if got := dependents[1]["referenceCount"]; got != 1 {
+		t.Fatalf("second dependent referenceCount: got %v want 1", got)
 	}
 }

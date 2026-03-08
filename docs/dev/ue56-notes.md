@@ -1,4 +1,4 @@
-# UE 5.6 Implementation Notes (Verified Against Engine Source)
+# UE 5.6/5.7 Implementation Notes (Verified Against Engine Source)
 
 Verified against UE source under `<UE_SOURCE_ROOT>`.
 
@@ -6,7 +6,7 @@ Verified against UE source under `<UE_SOURCE_ROOT>`.
 
 - `PACKAGE_FILE_TAG = 0x9E2A83C1` / `PACKAGE_FILE_TAG_SWAPPED = 0xC1832A9E`
   - `Runtime/Core/Public/UObject/ObjectVersion.h`
-- `EUnrealEngineObjectUE5Version` range is `1000..1017`
+- `EUnrealEngineObjectUE5Version` range is `1000..1018`
   - `Runtime/Core/Public/UObject/ObjectVersion.h`
 - Core serialization order of `FPackageFileSummary` (SavedHash, Name/Import/Export, MetaData, DataResource, etc.)
   - `Runtime/CoreUObject/Private/UObject/PackageFileSummary.cpp`
@@ -65,7 +65,25 @@ Verified against UE source under `<UE_SOURCE_ROOT>`.
 
 - `FSoftObjectPath` still carries legacy compatibility branches in addition to modern `FTopLevelAssetPath + SubPath`
   - `Runtime/CoreUObject/Private/UObject/SoftObjectPath.cpp`
-  - BPX policy: parser accepts `FileVersionUE5=1000..1017`; legacy branches outside that window are rejected.
+  - BPX policy: parser accepts `FileVersionUE5=1000..1018`; legacy branches outside that window are rejected.
+
+## 2026-03-05 UE 5.7.3 delta notes (vs 5.6.1)
+
+- `EUnrealEngineObjectUE5Version` adds `IMPORT_TYPE_HIERARCHIES` after `OS_SUB_OBJECT_SHADOW_SERIALIZATION`.
+  - `Runtime/Core/Public/UObject/ObjectVersion.h` (`enum class EUnrealEngineObjectUE5Version`)
+- `FPackageFileSummary` adds:
+  - `ImportTypeHierarchiesCount`
+  - `ImportTypeHierarchiesOffset`
+  - `Runtime/CoreUObject/Public/UObject/PackageFileSummary.h` (`struct FPackageFileSummary`)
+- Summary serialization gates these two fields at `FileVersionUE >= IMPORT_TYPE_HIERARCHIES`.
+  - `Runtime/CoreUObject/Private/UObject/PackageFileSummary.cpp` (`operator<<(FStructuredArchive::FSlot, FPackageFileSummary&)`)
+
+## 2026-03-06 unversioned summary fallback alignment
+
+- UE loader marks package summary as unversioned when all version fields are zero and then applies `GPackageFileUEVersion` / `GPackageFileLicenseeUEVersion`.
+  - `Runtime/CoreUObject/Private/UObject/PackageFileSummary.cpp` (`operator<<(FStructuredArchive::FSlot, FPackageFileSummary&)`)
+- BPX now mirrors this behavior by attempting unversioned parse with latest supported UE5 version first (`1018`), then retrying `1017` only when needed for legacy layout compatibility.
+- Retry trigger uses summary alignment (`NameOffset == SummarySize`) to avoid silently selecting a mismatched layout branch.
 
 ## 2026-03-01 FText Equivalence Notes
 
@@ -147,6 +165,17 @@ Verified against UE source under `<UE_SOURCE_ROOT>`.
   - `Runtime/CoreUObject/Private/UObject/Class.cpp` (tagged-property terminator `NAME_None`)
 - Full decode of `FBPVariableDescription.VarType` (`FEdGraphPinType`) is still pending; fallback path currently returns empty declaration type to avoid misreads.
 
+## 2026-03-07 audit follow-up fixes
+
+- Blueprint variable rename now derives `FriendlyName` using UE-equivalent `FName::NameToDisplayString` rules instead of a BPX-only identifier splitter.
+  - `Editor/UnrealEd/Private/Kismet2/BlueprintEditorUtils.cpp` (`FBlueprintEditorUtils::RenameMemberVariable`)
+  - `Runtime/Core/Private/UObject/UnrealNames.cpp` (`FName::NameToDisplayString`)
+- `BoolProperty` omission on CDO rewrites is now gated by actual `RF_ClassDefaultObject` and Blueprint declaration presence, rather than object/class-name string heuristics.
+  - `Runtime/CoreUObject/Public/UObject/ObjectMacros.h` (`RF_ClassDefaultObject`)
+  - `Runtime/CoreUObject/Private/UObject/Class.cpp` (`UStruct::SerializeVersionedTaggedProperties`)
+- Plain-string `TextProperty` updates now follow editor `FText::FromString` semantics; persistent save strips transient conversion bits, so saved flags end up zero.
+  - `Runtime/Core/Private/Internationalization/Text.cpp` (`FText::FromString`, `operator<<(FStructuredArchive::FSlot, FText&)`)
+
 ## 2026-03-02 level var-list / var-set notes (placed-object variables)
 
 - `.umap` placed-object resolution uses `FObjectExport::OuterIndex`, targeting exports under `PersistentLevel`.
@@ -219,3 +248,30 @@ Verified against UE source under `<UE_SOURCE_ROOT>`.
   - `Plugins/FX/Niagara/Source/Niagara/Private/NiagaraModule.cpp` (`FNiagaraTypeDefinition::Serialize`)
 - `FNiagaraVariant` can be reconstructed from tagged fields `Object / DataInterface / Bytes / CurrentMode`.
   - `Plugins/FX/Niagara/Source/Niagara/Public/NiagaraVariant.h`
+
+## 2026-03-04 Material CLI notes (`material read`)
+
+- Material instance parent and override arrays are serialized on `UMaterialInstance`.
+  - `Runtime/Engine/Public/Materials/MaterialInstance.h`
+    - `Parent`
+    - `ScalarParameterValues`, `VectorParameterValues`, `DoubleVectorParameterValues`
+    - `TextureParameterValues`, `TextureCollectionParameterValues`
+    - `RuntimeVirtualTextureParameterValues`, `SparseVolumeTextureParameterValues`
+    - `FontParameterValues`
+
+- Parameter identity semantics come from `FMaterialParameterInfo` (`Name`, `Association`, `Index`).
+  - `Runtime/Engine/Public/MaterialTypes.h`
+    - `struct FMaterialParameterInfo`
+    - `enum EMaterialParameterAssociation`
+
+- Custom-node source snippets are serialized as `UMaterialExpressionCustom::Code` plus related fields.
+  - `Runtime/Engine/Public/Materials/MaterialExpressionCustom.h`
+    - `Code`
+    - `Inputs`, `AdditionalOutputs`, `AdditionalDefines`, `IncludeFilePaths`
+
+- Full translated material HLSL is generated by UE material compilation, not stored as one complete source blob in `.uasset`.
+  - `Runtime/Engine/Private/Materials/HLSLMaterialTranslator.cpp`
+    - `FHLSLMaterialTranslator::Translate`
+    - `FHLSLMaterialTranslator::CustomExpression`
+  - `Runtime/Engine/Private/Materials/Material.cpp`
+    - `UMaterial::CompilePropertyEx`

@@ -1,0 +1,12 @@
+{
+	"command": "prop set",
+	"args":
+	{
+		"export": 3,
+		"path": "VColor",
+		"value": "{\"structType\":\"LinearColor\",\"value\":{\"r\":0.25,\"g\":0.5,\"b\":0.75,\"a\":1}}"
+	},
+	"ue_procedure": "Update LinearColor value on math fixture",
+	"expect": "byte_equal",
+	"notes": "Validated on ue5.6/ue5.7 math fixture roots."
+}

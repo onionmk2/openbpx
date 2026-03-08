@@ -1,0 +1,81 @@
+{
+  "argv": [
+    "material",
+    "read",
+    "testdata/golden/parse/MI_Chrome.uasset"
+  ],
+  "expected": {
+    "childrenScanned": false,
+    "exportFilter": 0,
+    "file": "testdata/golden/parse/MI_Chrome.uasset",
+    "hlsl": {
+      "customExpressionCount": 0,
+      "exportFilter": 0,
+      "file": "testdata/golden/parse/MI_Chrome.uasset",
+      "hint": "no custom-expression HLSL snippets were found in this package",
+      "hlslAvailable": false,
+      "materialCount": 1,
+      "materials": [
+        {
+          "className": "MaterialInstanceConstant",
+          "customExpressionCount": 0,
+          "customExpressions": [],
+          "export": 1,
+          "objectName": "MI_Chrome"
+        }
+      ],
+      "note": "`UMaterialExpressionCustom::Code` snippets are stored in assets and shown here. Full translated material HLSL is generated at compile time via FHLSLMaterialTranslator::Translate / UMaterial::CompilePropertyEx and is not serialized as a complete source blob in `.uasset`."
+    },
+    "hlslIncluded": true,
+    "inspect": {
+      "exportFilter": 0,
+      "file": "testdata/golden/parse/MI_Chrome.uasset",
+      "materialCount": 1,
+      "materials": [
+        {
+          "assetReferenceCount": 2,
+          "assetReferences": [
+            {
+              "className": "MaterialInstanceEditorOnlyData",
+              "index": 2,
+              "kind": "package-index",
+              "objectName": "MI_ChromeEditorOnlyData",
+              "packageName": "/Game/BPXFixtures/Parse/MI_Chrome",
+              "resolved": "export:2:MI_ChromeEditorOnlyData",
+              "sourcePath": "EditorOnlyData",
+              "targetPath": "/Game/BPXFixtures/Parse/MI_Chrome.MI_ChromeEditorOnlyData"
+            },
+            {
+              "className": "Material",
+              "index": -3,
+              "kind": "package-index",
+              "objectName": "WorldGridMaterial",
+              "resolved": "import:3:WorldGridMaterial",
+              "sourcePath": "Parent",
+              "targetPath": "/Engine/EngineMaterials/WorldGridMaterial"
+            }
+          ],
+          "className": "MaterialInstanceConstant",
+          "export": 1,
+          "objectName": "MI_Chrome",
+          "parameterCount": 0,
+          "parameterGroupCount": 0,
+          "parameterGroups": {},
+          "parent": {
+            "className": "Material",
+            "index": -3,
+            "kind": "package-index",
+            "objectName": "WorldGridMaterial",
+            "resolved": "import:3:WorldGridMaterial",
+            "targetPath": "/Engine/EngineMaterials/WorldGridMaterial"
+          }
+        }
+      ]
+    },
+    "readVersion": 1
+  },
+  "generatedAt": "2026-03-06T17:08:06Z",
+  "generatedBy": "scripts/gen_expected_output",
+  "name": "material_read_MI_Chrome",
+  "oracle": "ue-fixture"
+}

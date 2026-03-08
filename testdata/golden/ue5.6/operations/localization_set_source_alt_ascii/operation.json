@@ -1,0 +1,12 @@
+{
+	"command": "localization set-source",
+	"args":
+	{
+		"export": "11",
+		"path": "CategoryName",
+		"value": "HUD"
+	},
+	"ue_procedure": "Update existing TextProperty source string to alternate ASCII text",
+	"expect": "byte_equal",
+	"notes": "Alternate ASCII TextProperty source-string rewrite."
+}

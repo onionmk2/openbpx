@@ -1,0 +1,18 @@
+{
+	"command": "var rename",
+	"args":
+	{
+		"from": "UsedVar",
+		"to": "RenamedVar"
+	},
+	"ue_procedure": "Rename referenced variable",
+	"expect": "byte_equal",
+	"notes": "var rename applies declaration/name-map rewrites with reference updates.",
+	"ignore_offsets": [
+		{
+			"offset": 24,
+			"length": 20,
+			"reason": "ue-save-nondeterministic"
+		}
+	]
+}

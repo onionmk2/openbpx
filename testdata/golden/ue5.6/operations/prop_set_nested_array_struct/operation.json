@@ -1,0 +1,13 @@
+{
+	"command": "prop set",
+	"args":
+	{
+		"export": 1,
+		"path": "LastEditedDocuments[0].SavedZoomAmount",
+		"value": "-2.5"
+	},
+	"ue_procedure": "Attempt nested array-of-struct leaf update on blueprint metadata export",
+	"expect": "error_equal",
+	"error_contains": "EditedDocumentInfo is not editable",
+	"notes": "Fixture now asserts explicit rejection with byte-identical output."
+}

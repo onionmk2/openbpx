@@ -34,16 +34,32 @@ func runPackageCustomVersions(args []string, stdout, stderr io.Writer) int {
 }
 
 func runPackageDepends(args []string, stdout, stderr io.Writer) int {
-	file, asset, ok := parseSingleAssetCommand(args, "package depends", "usage: bpx package depends <file.uasset>", stderr)
-	if !ok {
+	fs := newFlagSet("package depends", stderr)
+	opts := registerCommonFlags(fs)
+	reverse := fs.Bool("reverse", false, "include reverse dependency mapping")
+	if err := parseFlagSet(fs, args); err != nil {
+		return 1
+	}
+	if fs.NArg() != 1 {
+		fmt.Fprintln(stderr, "usage: bpx package depends <file.uasset> [--reverse]")
+		return 1
+	}
+	file := fs.Arg(0)
+	asset, err := uasset.ParseFile(file, *opts)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: %v\n", err)
 		return 1
 	}
 	items, warnings := parseDependsMap(asset)
-	return printJSON(stdout, map[string]any{
+	resp := map[string]any{
 		"file":       file,
 		"dependsMap": items,
 		"warnings":   warnings,
-	})
+	}
+	if *reverse {
+		resp["reverseDependsMap"] = buildReverseDependsMap(items)
+	}
+	return printJSON(stdout, resp)
 }
 
 func runPackageResolveIndex(args []string, stdout, stderr io.Writer) int {
@@ -84,7 +100,7 @@ func runPackageSection(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 	if fs.NArg() != 1 || strings.TrimSpace(*section) == "" {
-		fmt.Fprintln(stderr, "usage: bpx package section <file.uasset> --name <soft-object-paths|gatherable-text|thumbnails|searchable-names|world-tile|asset-registry|bulk-data>")
+		fmt.Fprintln(stderr, "usage: bpx package section <file.uasset> --name <soft-object-paths|gatherable-text|thumbnails|import-type-hierarchies|searchable-names|world-tile|asset-registry|bulk-data>")
 		return 1
 	}
 	file := fs.Arg(0)
@@ -119,6 +135,9 @@ func buildPackageSectionResponse(file string, asset *uasset.Asset, section strin
 	case "thumbnails":
 		start = int64(asset.Summary.ThumbnailTableOffset)
 		responseName = "thumbnailTable"
+	case "import-type-hierarchies":
+		start = int64(asset.Summary.ImportTypeHierarchiesOffset)
+		responseName = "importTypeHierarchies"
 	case "searchable-names":
 		start = int64(asset.Summary.SearchableNamesOffset)
 		responseName = "searchableNames"
@@ -146,6 +165,8 @@ func buildPackageSectionResponse(file string, asset *uasset.Asset, section strin
 		resp["warnings"] = warnings
 	case "gatherable-text":
 		resp["count"] = asset.Summary.GatherableTextDataCount
+	case "import-type-hierarchies":
+		resp["count"] = asset.Summary.ImportTypeHierarchiesCount
 	case "bulk-data":
 		resp["bulkDataStartOffset"] = asset.Summary.BulkDataStartOffset
 		resp["dataResourceOffset"] = asset.Summary.DataResourceOffset
@@ -163,6 +184,8 @@ func normalizePackageSectionName(section string) (string, bool) {
 		return "gatherable-text", true
 	case "thumbnails":
 		return "thumbnails", true
+	case "import-type-hierarchies":
+		return "import-type-hierarchies", true
 	case "searchable-names":
 		return "searchable-names", true
 	case "world-tile":
@@ -633,6 +656,127 @@ func parseDependsMap(asset *uasset.Asset) ([]map[string]any, []string) {
 		warnings = append(warnings, fmt.Sprintf("depends map trailing bytes: %d", r.Remaining()))
 	}
 	return items, warnings
+}
+
+func buildReverseDependsMap(dependsMap []map[string]any) []map[string]any {
+	type sourceRef struct {
+		count      int
+		exportName string
+	}
+
+	exportNames := make(map[int]string, len(dependsMap))
+	reverse := make(map[int]map[int]sourceRef, len(dependsMap))
+	for _, entry := range dependsMap {
+		sourceExport, ok := anyInt(entry["export"])
+		if !ok || sourceExport <= 0 {
+			continue
+		}
+		sourceName := strings.TrimSpace(fmt.Sprint(entry["exportName"]))
+		exportNames[sourceExport] = sourceName
+		dependencies := anyMapSlice(entry["dependencies"])
+		for _, dep := range dependencies {
+			targetExport, ok := anyInt(dep["index"])
+			if !ok || targetExport <= 0 {
+				continue
+			}
+			if _, ok := reverse[targetExport]; !ok {
+				reverse[targetExport] = make(map[int]sourceRef)
+			}
+			current := reverse[targetExport][sourceExport]
+			current.count++
+			if current.exportName == "" {
+				current.exportName = sourceName
+			}
+			reverse[targetExport][sourceExport] = current
+		}
+	}
+
+	output := make([]map[string]any, 0, len(dependsMap))
+	for _, entry := range dependsMap {
+		targetExport, ok := anyInt(entry["export"])
+		if !ok || targetExport <= 0 {
+			continue
+		}
+		targetName := strings.TrimSpace(fmt.Sprint(entry["exportName"]))
+		if targetName == "" {
+			targetName = exportNames[targetExport]
+		}
+
+		srcMap := reverse[targetExport]
+		orderedSources := make([]int, 0, len(srcMap))
+		for sourceExport := range srcMap {
+			orderedSources = append(orderedSources, sourceExport)
+		}
+		sort.Ints(orderedSources)
+
+		dependents := make([]map[string]any, 0, len(orderedSources))
+		for _, sourceExport := range orderedSources {
+			source := srcMap[sourceExport]
+			dependents = append(dependents, map[string]any{
+				"export":         sourceExport,
+				"exportName":     source.exportName,
+				"referenceCount": source.count,
+			})
+		}
+
+		output = append(output, map[string]any{
+			"export":         targetExport,
+			"exportName":     targetName,
+			"dependentCount": len(dependents),
+			"dependents":     dependents,
+		})
+	}
+	return output
+}
+
+func anyInt(v any) (int, bool) {
+	switch t := v.(type) {
+	case int:
+		return t, true
+	case int8:
+		return int(t), true
+	case int16:
+		return int(t), true
+	case int32:
+		return int(t), true
+	case int64:
+		return int(t), true
+	case uint:
+		return int(t), true
+	case uint8:
+		return int(t), true
+	case uint16:
+		return int(t), true
+	case uint32:
+		return int(t), true
+	case uint64:
+		return int(t), true
+	case float32:
+		return int(t), true
+	case float64:
+		return int(t), true
+	default:
+		return 0, false
+	}
+}
+
+func anyMapSlice(v any) []map[string]any {
+	switch t := v.(type) {
+	case []map[string]any:
+		return t
+	case []any:
+		out := make([]map[string]any, 0, len(t))
+		for _, item := range t {
+			m, ok := item.(map[string]any)
+			if !ok {
+				continue
+			}
+			out = append(out, m)
+		}
+		return out
+	default:
+		return nil
+	}
 }
 
 func parseSoftObjectPathEntries(asset *uasset.Asset, data []byte, count int32) ([]map[string]any, []string) {

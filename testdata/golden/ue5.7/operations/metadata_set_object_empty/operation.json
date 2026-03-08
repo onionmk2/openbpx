@@ -1,0 +1,13 @@
+{
+	"command": "metadata set-object",
+	"args":
+	{
+		"export": "11",
+		"import": "10",
+		"key": "CategoryName",
+		"value": ""
+	},
+	"ue_procedure": "Update object metadata fallback path to empty text",
+	"expect": "byte_equal",
+	"notes": "Object metadata fallback rewrite to empty text."
+}

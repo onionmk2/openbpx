@@ -347,14 +347,23 @@ func TestParseBytesRejectsOutOfWindowUEVersion(t *testing.T) {
 }
 
 func TestParseBytesRejectsOutOfWindowUEVersionBeforeParsingMaps(t *testing.T) {
-	data := buildMinimalFixture(t, 6)
-	binary.LittleEndian.PutUint32(data[16:20], uint32(9999))
+	data := buildFixture(t, fixtureBuildArgs{
+		EngineMinor:                       7,
+		FileVersionUE5:                    ue5ImportTypeHierarchies,
+		NameCount:                         6,
+		ImportCount:                       1,
+		ExportCount:                       1,
+		NamesReferencedCount:              6,
+		IncludeScriptOffsets:              true,
+		IncludeSerializationControlPrefix: true,
+	})
 
 	r := newByteReader(data)
 	if _, err := parseSummary(r); err != nil {
 		t.Fatalf("parseSummary failed: %v", err)
 	}
 	data = data[:r.offset()]
+	binary.LittleEndian.PutUint32(data[16:20], uint32(9999))
 
 	_, err := ParseBytes(data, DefaultParseOptions())
 	if err == nil {
@@ -378,6 +387,50 @@ func TestParseBytesAcceptsUnversionedPackage(t *testing.T) {
 	}
 	if !asset.Summary.Unversioned {
 		t.Fatalf("expected unversioned summary flag")
+	}
+	if got, want := asset.Summary.FileVersionUE5, int32(ue5OSSubObjectShadowSerialization); got != want {
+		t.Fatalf("unversioned fallback fileVersionUE5: got %d want %d", got, want)
+	}
+	if got, want := int32(asset.Summary.SummarySize), asset.Summary.NameOffset; got != want {
+		t.Fatalf("summary alignment mismatch: summarySize=%d nameOffset=%d", got, want)
+	}
+}
+
+func TestParseBytesAcceptsUnversionedPackageUE57Layout(t *testing.T) {
+	data := buildFixture(t, fixtureBuildArgs{
+		EngineMinor:                 7,
+		FileVersionUE5:              ue5ImportTypeHierarchies,
+		NameCount:                   6,
+		ImportCount:                 1,
+		ExportCount:                 1,
+		NamesReferencedCount:        6,
+		ImportTypeHierarchiesCount:  3,
+		ImportTypeHierarchiesOffset: 1234,
+		IncludeScriptOffsets:        true,
+	})
+	// Summary version fields: FileVersionUE4 / FileVersionUE5 / FileVersionLicenseeUE4.
+	binary.LittleEndian.PutUint32(data[12:16], 0)
+	binary.LittleEndian.PutUint32(data[16:20], 0)
+	binary.LittleEndian.PutUint32(data[20:24], 0)
+
+	asset, err := ParseBytes(data, DefaultParseOptions())
+	if err != nil {
+		t.Fatalf("ParseBytes failed: %v", err)
+	}
+	if !asset.Summary.Unversioned {
+		t.Fatalf("expected unversioned summary flag")
+	}
+	if got, want := asset.Summary.FileVersionUE5, int32(ue5ImportTypeHierarchies); got != want {
+		t.Fatalf("unversioned fallback fileVersionUE5: got %d want %d", got, want)
+	}
+	if got, want := asset.Summary.ImportTypeHierarchiesCount, int32(3); got != want {
+		t.Fatalf("import type hierarchies count: got %d want %d", got, want)
+	}
+	if got, want := asset.Summary.ImportTypeHierarchiesOffset, int32(1234); got != want {
+		t.Fatalf("import type hierarchies offset: got %d want %d", got, want)
+	}
+	if got, want := int32(asset.Summary.SummarySize), asset.Summary.NameOffset; got != want {
+		t.Fatalf("summary alignment mismatch: summarySize=%d nameOffset=%d", got, want)
 	}
 }
 
@@ -655,6 +708,35 @@ func TestSummaryFeatureGuards(t *testing.T) {
 	}
 }
 
+func TestParseBytesReadsImportTypeHierarchiesForUE57(t *testing.T) {
+	data := buildFixture(t, fixtureBuildArgs{
+		EngineMinor:                       7,
+		FileVersionUE5:                    ue5ImportTypeHierarchies,
+		NameCount:                         6,
+		ImportCount:                       1,
+		ExportCount:                       1,
+		NamesReferencedCount:              6,
+		ImportTypeHierarchiesCount:        3,
+		ImportTypeHierarchiesOffset:       512,
+		IncludeScriptOffsets:              true,
+		IncludeSerializationControlPrefix: true,
+	})
+
+	asset, err := ParseBytes(data, DefaultParseOptions())
+	if err != nil {
+		t.Fatalf("ParseBytes failed: %v", err)
+	}
+	if got, want := asset.Summary.FileVersionUE5, int32(ue5ImportTypeHierarchies); got != want {
+		t.Fatalf("fileVersionUE5: got %d want %d", got, want)
+	}
+	if got, want := asset.Summary.ImportTypeHierarchiesCount, int32(3); got != want {
+		t.Fatalf("importTypeHierarchiesCount: got %d want %d", got, want)
+	}
+	if got, want := asset.Summary.ImportTypeHierarchiesOffset, int32(512); got != want {
+		t.Fatalf("importTypeHierarchiesOffset: got %d want %d", got, want)
+	}
+}
+
 func TestIsUE56VersionChecks(t *testing.T) {
 	s := PackageSummary{
 		FileVersionUE5: 1017,
@@ -698,7 +780,7 @@ func TestValidateSupportedVersionWindow(t *testing.T) {
 	if err := validateSupportedVersionWindow(PackageSummary{FileVersionUE5: 1000}); err != nil {
 		t.Fatalf("validate lower bound: %v", err)
 	}
-	if err := validateSupportedVersionWindow(PackageSummary{FileVersionUE5: 1017}); err != nil {
+	if err := validateSupportedVersionWindow(PackageSummary{FileVersionUE5: 1018}); err != nil {
 		t.Fatalf("validate upper bound: %v", err)
 	}
 	if err := validateSupportedVersionWindow(PackageSummary{FileVersionUE5: 999}); err == nil {
@@ -784,13 +866,16 @@ func buildMinimalFixture(t *testing.T, engineMinor uint16) []byte {
 }
 
 type fixtureBuildArgs struct {
-	EngineMinor          uint16
-	PackageFlags         uint32
-	NameCount            int32
-	ImportCount          int32
-	ExportCount          int32
-	NamesReferencedCount int32
-	IncludeScriptOffsets bool
+	EngineMinor                 uint16
+	FileVersionUE5              int32
+	PackageFlags                uint32
+	NameCount                   int32
+	ImportCount                 int32
+	ExportCount                 int32
+	NamesReferencedCount        int32
+	ImportTypeHierarchiesCount  int32
+	ImportTypeHierarchiesOffset int32
+	IncludeScriptOffsets        bool
 
 	IncludeSerializationControlPrefix        bool
 	SerializationControlOverridableOperation bool
@@ -810,17 +895,20 @@ func buildFixture(t *testing.T, args fixtureBuildArgs) []byte {
 	})
 
 	summaryTemplate := buildSummary(t, summaryBuildArgs{
-		NameOffset:           0,
-		ImportOffset:         0,
-		ExportOffset:         0,
-		TotalHeaderSize:      0,
-		BulkDataStartOffset:  0,
-		EngineMinor:          args.EngineMinor,
-		PackageFlags:         args.PackageFlags,
-		NameCount:            args.NameCount,
-		ImportCount:          args.ImportCount,
-		ExportCount:          args.ExportCount,
-		NamesReferencedCount: args.NamesReferencedCount,
+		NameOffset:                  0,
+		ImportOffset:                0,
+		ExportOffset:                0,
+		TotalHeaderSize:             0,
+		BulkDataStartOffset:         0,
+		EngineMinor:                 args.EngineMinor,
+		FileVersionUE5:              args.FileVersionUE5,
+		PackageFlags:                args.PackageFlags,
+		NameCount:                   args.NameCount,
+		ImportCount:                 args.ImportCount,
+		ExportCount:                 args.ExportCount,
+		NamesReferencedCount:        args.NamesReferencedCount,
+		ImportTypeHierarchiesCount:  args.ImportTypeHierarchiesCount,
+		ImportTypeHierarchiesOffset: args.ImportTypeHierarchiesOffset,
 	})
 
 	exportMapTemplate := buildExportMap(t, exportBuildArgs{
@@ -842,17 +930,20 @@ func buildFixture(t *testing.T, args fixtureBuildArgs) []byte {
 		IncludeScriptOffsets: args.IncludeScriptOffsets,
 	})
 	summary := buildSummary(t, summaryBuildArgs{
-		NameOffset:           nameOffset,
-		ImportOffset:         importOffset,
-		ExportOffset:         exportOffset,
-		TotalHeaderSize:      totalHeader,
-		BulkDataStartOffset:  fullSize,
-		EngineMinor:          args.EngineMinor,
-		PackageFlags:         args.PackageFlags,
-		NameCount:            args.NameCount,
-		ImportCount:          args.ImportCount,
-		ExportCount:          args.ExportCount,
-		NamesReferencedCount: args.NamesReferencedCount,
+		NameOffset:                  nameOffset,
+		ImportOffset:                importOffset,
+		ExportOffset:                exportOffset,
+		TotalHeaderSize:             totalHeader,
+		BulkDataStartOffset:         fullSize,
+		EngineMinor:                 args.EngineMinor,
+		FileVersionUE5:              args.FileVersionUE5,
+		PackageFlags:                args.PackageFlags,
+		NameCount:                   args.NameCount,
+		ImportCount:                 args.ImportCount,
+		ExportCount:                 args.ExportCount,
+		NamesReferencedCount:        args.NamesReferencedCount,
+		ImportTypeHierarchiesCount:  args.ImportTypeHierarchiesCount,
+		ImportTypeHierarchiesOffset: args.ImportTypeHierarchiesOffset,
 	})
 
 	var out bytes.Buffer
@@ -865,17 +956,20 @@ func buildFixture(t *testing.T, args fixtureBuildArgs) []byte {
 }
 
 type summaryBuildArgs struct {
-	NameOffset           int32
-	ImportOffset         int32
-	ExportOffset         int32
-	TotalHeaderSize      int32
-	BulkDataStartOffset  int64
-	EngineMinor          uint16
-	PackageFlags         uint32
-	NameCount            int32
-	ImportCount          int32
-	ExportCount          int32
-	NamesReferencedCount int32
+	NameOffset                  int32
+	ImportOffset                int32
+	ExportOffset                int32
+	TotalHeaderSize             int32
+	BulkDataStartOffset         int64
+	EngineMinor                 uint16
+	FileVersionUE5              int32
+	PackageFlags                uint32
+	NameCount                   int32
+	ImportCount                 int32
+	ExportCount                 int32
+	NamesReferencedCount        int32
+	ImportTypeHierarchiesCount  int32
+	ImportTypeHierarchiesOffset int32
 }
 
 func buildSummary(t *testing.T, args summaryBuildArgs) []byte {
@@ -899,12 +993,16 @@ func buildSummary(t *testing.T, args summaryBuildArgs) []byte {
 		wu32(0)
 		wstr("test")
 	}
+	fileVersionUE5 := args.FileVersionUE5
+	if fileVersionUE5 == 0 {
+		fileVersionUE5 = ue5OSSubObjectShadowSerialization
+	}
 
 	wu32(packageFileTag)
 	w32(-9)
 	w32(864)
 	w32(522)
-	w32(1017)
+	w32(fileVersionUE5)
 	w32(0)
 	b.Write(make([]byte, 20))
 	w32(args.TotalHeaderSize)
@@ -943,6 +1041,10 @@ func buildSummary(t *testing.T, args summaryBuildArgs) []byte {
 	w32(0) // SoftPackageReferencesOffset
 	w32(0) // SearchableNamesOffset
 	w32(0) // ThumbnailTableOffset
+	if fileVersionUE5 >= ue5ImportTypeHierarchies {
+		w32(args.ImportTypeHierarchiesCount)
+		w32(args.ImportTypeHierarchiesOffset)
+	}
 
 	wguid() // PersistentGuid
 

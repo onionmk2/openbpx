@@ -1,0 +1,49 @@
+{
+  "argv": [
+    "prop",
+    "list",
+    "testdata/golden/operations/prop_set_custom_struct_int/after.uasset",
+    "--export",
+    "5"
+  ],
+  "expected": {
+    "className": "Fixture_C",
+    "decoded": true,
+    "export": 5,
+    "file": "testdata/golden/operations/prop_set_custom_struct_int/after.uasset",
+    "objectName": "Default__Fixture_C",
+    "properties": [
+      {
+        "arrayIndex": 0,
+        "flags": 0,
+        "name": "FixtureCustom",
+        "offset": 20385,
+        "size": 37,
+        "type": "StructProperty(BPXFixtureCustomStruct(/Script/BPXFixtureGenerator))",
+        "value": {
+          "structType": "BPXFixtureCustomStruct",
+          "value": {
+            "IntVal": {
+              "flags": 0,
+              "offset": 0,
+              "type": "IntProperty",
+              "typeNodes": [
+                {
+                  "innerCount": 0,
+                  "name": "IntProperty"
+                }
+              ],
+              "value": 42
+            }
+          }
+        },
+        "valueOffset": 20434
+      }
+    ],
+    "warnings": null
+  },
+  "generatedAt": "2026-03-06T17:08:06Z",
+  "generatedBy": "scripts/gen_expected_output",
+  "name": "prop_list_prop_set_custom_struct_int_after_export5",
+  "oracle": "ue-fixture"
+}

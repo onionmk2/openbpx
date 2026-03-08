@@ -3,7 +3,6 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
-	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -15,11 +14,11 @@ func TestDataTableReadCompositeParentReferences(t *testing.T) {
 	}{
 		{
 			name:        "add row reject fixture",
-			fixturePath: filepath.Join("..", "..", "testdata", "golden", "operations", "dt_add_row_composite_reject", "before.uasset"),
+			fixturePath: goldenOperationFixturePath(t, "dt_add_row_composite_reject", "before.uasset"),
 		},
 		{
 			name:        "remove row reject fixture",
-			fixturePath: filepath.Join("..", "..", "testdata", "golden", "operations", "dt_remove_row_composite_reject", "before.uasset"),
+			fixturePath: goldenOperationFixturePath(t, "dt_remove_row_composite_reject", "before.uasset"),
 		},
 	}
 
@@ -67,7 +66,7 @@ func TestDataTableReadCompositeParentReferences(t *testing.T) {
 }
 
 func TestDataTableReadNonCompositeHasNoCompositeParentReferences(t *testing.T) {
-	fixturePath := filepath.Join("..", "..", "testdata", "golden", "operations", "dt_add_row", "before.uasset")
+	fixturePath := goldenOperationFixturePath(t, "dt_add_row", "before.uasset")
 	table := runDataTableReadAndFirstTable(t, fixturePath)
 	if got := strings.TrimSpace(anyToString(table["className"])); got != "DataTable" {
 		t.Fatalf("expected DataTable class, got %q", got)

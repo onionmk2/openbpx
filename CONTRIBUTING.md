@@ -66,6 +66,35 @@ Use Conventional Commit prefixes:
 - For parser/rewrite safety changes, add focused tests near the modified package.
 - If test coverage is not feasible, document the gap and manual validation performed.
 
+### Local UE Path Configuration (Contributors)
+
+For fixture-generation workflows, you can keep local Unreal/Lyra paths in a machine-local config file.
+This avoids passing long path flags on every run.
+
+```bash
+# One-time local setup
+cp scripts/local-fixtures.config.example.json scripts/local-fixtures.config.json
+```
+
+Edit `scripts/local-fixtures.config.json` and set at least:
+
+- `engines`: engine-profile keyed settings (for example `5.6.1`, `5.7.3`)
+- `engines.<version>.lyraRoot`: Lyra root per engine profile
+
+Then run fixture scripts without path flags:
+
+```bash
+./scripts/gen-fixtures.sh --scope 1,2
+```
+
+Notes:
+
+- `scripts/local-fixtures.config.json` is gitignored and must not be committed.
+- Each `engines.<version>` entry should include at least `lyraRoot`; `ueEngineRoot` is strongly recommended.
+- `gen-fixtures.sh` and `sync-bpx-plugin.sh` process all configured `engines` profiles in one run (in parallel when multiple profiles are present).
+- You can use a non-default config path via `--config <path>`.
+- CLI flags still override config values when both are specified.
+
 ## Security
 
 Please do not report vulnerabilities in public issues.

@@ -1,0 +1,10 @@
+{
+	"command": "package set-flags",
+	"args":
+	{
+		"flags": "PKG_RUNTIMEGENERATED"
+	},
+	"ue_procedure": "Set package flags to runtime-generated only",
+	"expect": "byte_equal",
+	"notes": "Symbolic single-flag package update fixture."
+}

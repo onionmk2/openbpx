@@ -1,0 +1,13 @@
+{
+	"command": "enum write-value",
+	"args":
+	{
+		"export": "1",
+		"name": "NewEnumerator0",
+		"value": "Up"
+	},
+	"ue_procedure": "Reject enum write-value when editable property path is absent",
+	"expect": "error_equal",
+	"error_contains": "no editable path matched",
+	"notes": "Enum write-value currently targets existing enum-backed properties only."
+}

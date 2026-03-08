@@ -1,0 +1,12 @@
+{
+	"command": "metadata set-root",
+	"args":
+	{
+		"export": "11",
+		"key": "CategoryName",
+		"value": "ゲームプレイ"
+	},
+	"ue_procedure": "Update root category metadata to unicode text",
+	"expect": "byte_equal",
+	"notes": "Unicode root metadata rewrite fixture."
+}

@@ -1,0 +1,11 @@
+{
+	"command": "package set-flags",
+	"args":
+	{
+		"flags": "PKG_FILTEREDITORONLY"
+	},
+	"ue_procedure": "Reject shape-sensitive PKG_FilterEditorOnly update",
+	"expect": "error_equal",
+	"error_contains": "not supported",
+	"notes": "Package flag update must reject PKG_FilterEditorOnly."
+}

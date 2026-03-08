@@ -1,0 +1,10 @@
+{
+  "command": "write",
+  "args": {
+    "out": "{TARGET}.out.umap"
+  },
+  "ue_procedure": "Write map package bytes to a new output file without edits",
+  "expect": "byte_equal",
+  "notes": "Round-trip write output for .umap should stay byte-identical.",
+  "actual_file": "{TARGET}.out.umap"
+}

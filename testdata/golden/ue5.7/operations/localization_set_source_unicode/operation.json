@@ -1,0 +1,12 @@
+{
+	"command": "localization set-source",
+	"args":
+	{
+		"export": "11",
+		"path": "CategoryName",
+		"value": "ゲームプレイ"
+	},
+	"ue_procedure": "Update existing TextProperty source string to unicode text",
+	"expect": "byte_equal",
+	"notes": "Existing TextProperty source-string unicode rewrite."
+}

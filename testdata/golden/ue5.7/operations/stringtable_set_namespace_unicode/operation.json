@@ -1,0 +1,11 @@
+{
+	"command": "stringtable set-namespace",
+	"args":
+	{
+		"export": "1",
+		"namespace": "UI.共通"
+	},
+	"ue_procedure": "Set string table namespace to unicode value",
+	"expect": "byte_equal",
+	"notes": "Serialized StringTable unicode namespace rewrite."
+}

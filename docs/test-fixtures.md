@@ -1,6 +1,6 @@
 # Test Plan and Fixture Specification
 
-> **Design principle**: Following SQLite-style testing discipline, generate golden `before -> after` fixture pairs in UE 5.6 Editor and verify that `bpx` output is byte-identical to UE Editor output for equivalent operations.
+> **Design principle**: Following SQLite-style testing discipline, generate golden `before -> after` fixture pairs per UE engine version and verify that `bpx` output is byte-identical to UE Editor output for equivalent operations.
 > Parser bugs can directly corrupt assets, so test depth is treated as non-negotiable.
 
 ---
@@ -21,9 +21,41 @@ Sync it into the Lyra sample project's plugin directory before running the comma
   --scope 1,2
 ```
 
+You can keep local UE/Lyra paths in a machine-local config file instead of passing them every time:
+
+```bash
+# One-time setup (local only; gitignored)
+cp scripts/local-fixtures.config.example.json scripts/local-fixtures.config.json
+
+# Then run without path flags
+./scripts/gen-fixtures.sh --scope 1,2
+```
+
+`gen-fixtures.sh` and `sync-bpx-plugin.sh` automatically read `scripts/local-fixtures.config.json` when present.
+Use `--config <path>` to load a different config file explicitly.
+When `engines` is defined, both scripts process all configured profiles in one run.
+If multiple profiles are configured, they are executed in parallel.
+
+`local-fixtures.config.json` keys:
+
+| Key | Required | Description |
+|---|---|---|
+| `engines` | ✅ (for multi-engine) | Engine profile map. Each key is an arbitrary version label (for example `5.6.1`, `5.7.3`) |
+| `engines.<key>.lyraRoot` | ✅ | Lyra project root (Windows path) for that engine profile |
+| `engines.<key>.ueEngineRoot` | recommended | UE engine root (Windows path); used to resolve editor binaries when `editorCmdPath` is omitted |
+| `engines.<key>.editorCmdPath` | optional | Explicit Unreal editor executable path (`UnrealEditor-Cmd.exe` or `UnrealEditor.exe`) |
+| `engines.<key>.goldenRoot` | optional | Per-engine fixture output root |
+| `bpxRepoRoot` | optional | BPX repo root path; defaults to this repository root |
+| `scope` / `include` / `skipEditorBuild` | optional | Default values for corresponding CLI options |
+
+Legacy flat keys (`lyraRoot`, `ueEngineRoot`, `editorCmdPath`, `goldenRoot`) are still supported for single-engine setups.
+For parallel multi-engine runs, each profile should target a distinct `lyraRoot`.
+
 `gen-fixtures` runs a `Build.bat` prebuild for the editor by default and launches `UnrealEditor-Cmd` with `-Unattended` to avoid blocking dialogs.
 Use `--skip-editor-build` only if the editor build is already up to date and you need a faster loop.
 `--scope` accepts `1 (read/validate)` or `2 (write/update)`.
+By default, generated fixtures are written under `testdata/golden/ue<major>.<minor>/`.
+Use `--golden-root` to override the destination root explicitly.
 
 ## 0. Testing Philosophy
 
@@ -66,10 +98,14 @@ testdata/
 ├── BPXFixtureGenerator/            # source-of-truth UE plugin (tracked)
 ├── manifest.json                   # fixture metadata and SHA-256
 ├── golden/
-│   ├── parse/                      # parse-validation fixtures
-│   ├── roundtrip/                  # helper marker for round-trip scope
-│   ├── operations/                 # operation-equivalence before/after pairs
-│   └── expected_output/            # expected CLI output fixtures
+│   ├── ue5.6/
+│   │   ├── parse/                  # parse-validation fixtures
+│   │   ├── operations/             # operation-equivalence before/after pairs
+│   │   └── expected_output/        # expected CLI output fixtures
+│   ├── ue5.7/
+│   │   ├── parse/
+│   │   ├── operations/
+│   │   └── expected_output/
 ├── regression/                     # bug-fix regression fixtures
 ├── fuzz/
 │   ├── corpus/                     # initial fuzz corpus
@@ -79,7 +115,7 @@ testdata/
 
 ---
 
-## 3. Golden Fixtures for Parse Validation (`golden/parse/`)
+## 3. Golden Fixtures for Parse Validation (`golden/<engine>/parse/`)
 
 ### 3.1 Blueprint Fixtures
 
@@ -123,7 +159,7 @@ testdata/
 
 ---
 
-## 4. Golden Operation Pairs (`golden/operations/`)
+## 4. Golden Operation Pairs (`golden/<engine>/operations/`)
 
 Each directory includes `before.uasset` and `after.uasset` (UE Editor output after performing the equivalent operation).
 The BPX output is valid only when it is byte-identical to `after.uasset`.
@@ -219,13 +255,13 @@ Each operation pair directory includes `operation.json`, consumed by the test ru
 
 ### 5.1 Target Scope
 
-All files under `golden/parse/` are round-trip targets.
+All files under each `golden/<engine>/parse/` are round-trip targets.
 Collection should stay directory-driven so new fixtures are auto-included.
 
 ### 5.2 Validation Logic
 
 ```text
-for each .uasset in golden/parse/:
+for each .uasset in golden/<engine>/parse/:
     asset = Parse(file)
     output = Serialize(asset)
     assert output == file  // byte-identical
@@ -240,7 +276,8 @@ for each .uasset in golden/parse/:
 
 ## 6. Field-Accuracy Tests
 
-Compare parsed results against UE-verified expected outputs in `golden/expected_output/*.json`.
+Compare parsed results against UE-verified expected outputs in `golden/<engine>/expected_output/*.json`.
+Fixtures keep canonical `testdata/golden/...` argv/expected paths; the test harness rebases them to each engine root at runtime.
 
 ### 6.1 Expected File Format
 
@@ -262,8 +299,8 @@ Compare parsed results against UE-verified expected outputs in `golden/expected_
 
 ### 6.2 Helper Generation for `expected_output`
 
-- default output of `go run ./scripts/gen_expected_output` is `testdata/reports/generated_expected_output/`
-- only use `--allow-golden-overwrite` for intentional writes into `golden/expected_output/`
+- default output of `go run ./scripts/gen_expected_output` is `testdata/reports/generated_expected_output/<engine>/` when `--golden-root` points at `testdata/golden/`
+- only use `--allow-golden-overwrite` for intentional writes into `golden/<engine>/expected_output/`
 - after direct overwrite, keep `oracle` as `ue-fixture` and commit only UE-reviewed diffs
 
 ### 6.3 Coverage Targets
@@ -315,9 +352,9 @@ Compare parsed results against UE-verified expected outputs in `golden/expected_
 
 | File | Content | Validation target |
 |---|---|---|
-| `BP_UE55.uasset` | header-mutated `FileVersionUE5=1014` | parser path smoke for in-window legacy version (synthetic) |
-| `BP_UE54.uasset` | header-mutated `FileVersionUE5=1009` | parser path smoke for in-window legacy version (synthetic) |
-| `BP_FutureVersion.uasset` | tampered `FileVersionUE5=9999` | unknown-version rejection |
+| `BP_UE55.uasset` | synthetic minimal package with UE5.5-era summary layout (`FileVersionUE5=1014`) | parser path smoke for in-window legacy version |
+| `BP_UE54.uasset` | synthetic minimal package with UE5.4-era summary layout (`FileVersionUE5=1009`) | parser path smoke for in-window legacy version |
+| `BP_FutureVersion.uasset` | synthetic minimal package with unsupported `FileVersionUE5=9999` but otherwise aligned summary layout | unknown-version rejection |
 
 ### 7.3 `gen_synthetic.go`
 
@@ -346,7 +383,7 @@ It mutates specific offsets on top of valid fixtures to produce error cases.
 
 ### 8.2 Fuzz corpus
 
-Initialize corpus primarily from all `.uasset` files in `golden/parse/`.
+Initialize corpus primarily from all `.uasset` files in `golden/<engine>/parse/`.
 
 ### 8.3 CI integration
 
@@ -367,7 +404,7 @@ Initialize corpus primarily from all `.uasset` files in `golden/parse/`.
 
 ### 9.1 Standard workflow
 
-1. Open the Lyra sample project in UE 5.6 editor.
+1. Open the Lyra sample project in target UE editor (for example UE 5.6 or UE 5.7).
 2. Create assets under `Content/TestFixtures/Operations/<case>/`.
 3. Save initial state and copy as `before.uasset`.
 4. Perform intended editor operation (value update, rename, etc.).
@@ -539,7 +576,7 @@ jobs:
   "generated": "2026-XX-XX",
   "fixtures": [
     {
-      "path": "golden/parse/BP_Empty.uasset",
+      "path": "golden/<engine>/parse/BP_Empty.uasset",
       "description": "Empty Actor Blueprint fixture",
       "ue_version": "5.6",
       "sha256": "<hash>",
@@ -548,14 +585,14 @@ jobs:
       "milestone": "1"
     },
     {
-      "path": "golden/operations/prop_set_int/before.uasset",
+      "path": "golden/<engine>/operations/prop_set_int/before.uasset",
       "description": "prop set int: before state",
       "ue_version": "5.6",
       "sha256": "<hash>",
       "size_bytes": 0,
       "layers": ["operation_equivalence"],
       "milestone": "2",
-      "pair": "golden/operations/prop_set_int/after.uasset"
+      "pair": "golden/<engine>/operations/prop_set_int/after.uasset"
     }
   ]
 }

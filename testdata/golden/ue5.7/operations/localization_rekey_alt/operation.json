@@ -1,0 +1,12 @@
+{
+	"command": "localization rekey",
+	"args":
+	{
+		"namespace": "SCS",
+		"from-key": "Default",
+		"to-key": "HUDTitle"
+	},
+	"ue_procedure": "Rekey localization IDs within namespace to HUDTitle",
+	"expect": "byte_equal",
+	"notes": "Localization rekey variant to HUDTitle."
+}

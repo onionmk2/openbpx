@@ -81,6 +81,7 @@ INCLUDE_PATHS=(
   ".claude-plugin"
   "CHANGELOG.md"
   "CONTRIBUTING.md"
+  ".github/workflows/auto-tag-release.yml"
   ".github/workflows/build-artifacts-main.yml"
   ".github/workflows/fuzz-weekly.yml"
   ".github/workflows/release.yml"

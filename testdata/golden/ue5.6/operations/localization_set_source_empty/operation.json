@@ -1,0 +1,12 @@
+{
+	"command": "localization set-source",
+	"args":
+	{
+		"export": "11",
+		"path": "CategoryName",
+		"value": ""
+	},
+	"ue_procedure": "Update existing TextProperty source string to empty text",
+	"expect": "byte_equal",
+	"notes": "Empty TextProperty source-string rewrite."
+}

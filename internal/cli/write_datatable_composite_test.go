@@ -9,7 +9,7 @@ import (
 )
 
 func TestDataTableWriteCommandsRejectCompositeDataTable(t *testing.T) {
-	fixturePath := filepath.Join("..", "..", "testdata", "golden", "operations", "dt_add_row_composite_reject", "before.uasset")
+	fixturePath := goldenOperationFixturePath(t, "dt_add_row_composite_reject", "before.uasset")
 	originalBytes, err := os.ReadFile(fixturePath)
 	if err != nil {
 		t.Fatalf("read composite fixture: %v", err)

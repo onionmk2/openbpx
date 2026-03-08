@@ -1,0 +1,12 @@
+{
+	"command": "metadata set-root",
+	"args":
+	{
+		"export": "11",
+		"key": "CategoryName",
+		"value": "UI"
+	},
+	"ue_procedure": "Update root category metadata to alternate ASCII text",
+	"expect": "byte_equal",
+	"notes": "Alternate ASCII root metadata rewrite fixture."
+}

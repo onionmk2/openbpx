@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"sort"
 	"testing"
 
 	"github.com/wilddogjp/openbpx/pkg/uasset"
@@ -13,7 +14,7 @@ func TestRunSuccess(t *testing.T) {
 	asset := &uasset.Asset{
 		Raw: uasset.RawAsset{Bytes: []byte{0x01, 0x02, 0x03}},
 		Summary: uasset.PackageSummary{
-			FileVersionUE5:       1017,
+			FileVersionUE5:       1018,
 			NameCount:            1,
 			ImportCount:          0,
 			ExportCount:          0,
@@ -37,7 +38,7 @@ func TestRunDetectsBrokenExportSerialRange(t *testing.T) {
 	asset := &uasset.Asset{
 		Raw: uasset.RawAsset{Bytes: []byte{0x01, 0x02, 0x03}},
 		Summary: uasset.PackageSummary{
-			FileVersionUE5:       1017,
+			FileVersionUE5:       1018,
 			NameCount:            1,
 			ImportCount:          0,
 			ExportCount:          1,
@@ -61,39 +62,72 @@ func TestRunDetectsBrokenExportSerialRange(t *testing.T) {
 }
 
 func TestRoundTripGoldenFixtures(t *testing.T) {
-	baseDir := filepath.Join("..", "..", "testdata", "golden", "parse")
-	patterns := []string{
-		filepath.Join(baseDir, "*.uasset"),
-		filepath.Join(baseDir, "*.umap"),
+	goldenBase := filepath.Join("..", "..", "testdata", "golden")
+	versionedRoots := make([]string, 0, 4)
+	entries, err := os.ReadDir(goldenBase)
+	if err != nil {
+		t.Fatalf("read golden dir: %v", err)
 	}
-
-	var fixtures []string
-	for _, pattern := range patterns {
-		matches, err := filepath.Glob(pattern)
-		if err != nil {
-			t.Fatalf("glob failed: %v", err)
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
 		}
-		fixtures = append(fixtures, matches...)
+		candidate := filepath.Join(goldenBase, entry.Name(), "parse")
+		if info, err := os.Stat(candidate); err == nil && info.IsDir() {
+			versionedRoots = append(versionedRoots, filepath.Join(goldenBase, entry.Name()))
+		}
+	}
+	sort.Strings(versionedRoots)
+
+	roots := make([]string, 0, 4)
+	if len(versionedRoots) > 0 {
+		roots = append(roots, versionedRoots...)
+	} else if info, err := os.Stat(filepath.Join(goldenBase, "parse")); err == nil && info.IsDir() {
+		roots = append(roots, goldenBase)
 	}
 
-	if len(fixtures) == 0 {
-		t.Skip("no golden .uasset/.umap fixtures present yet")
+	if len(roots) == 0 {
+		t.Skip("no golden parse fixture roots present yet")
 	}
 
 	opts := uasset.DefaultParseOptions()
-	for _, fixture := range fixtures {
-		fixture := fixture
-		t.Run(filepath.Base(fixture), func(t *testing.T) {
-			data, err := os.ReadFile(fixture)
-			if err != nil {
-				t.Fatalf("read fixture: %v", err)
+	for _, root := range roots {
+		root := root
+		t.Run(filepath.Base(root), func(t *testing.T) {
+			parseDir := filepath.Join(root, "parse")
+			patterns := []string{
+				filepath.Join(parseDir, "*.uasset"),
+				filepath.Join(parseDir, "*.umap"),
 			}
-			asset, err := uasset.ParseBytes(data, opts)
-			if err != nil {
-				t.Fatalf("parse fixture: %v", err)
+
+			var fixtures []string
+			for _, pattern := range patterns {
+				matches, err := filepath.Glob(pattern)
+				if err != nil {
+					t.Fatalf("glob failed: %v", err)
+				}
+				fixtures = append(fixtures, matches...)
 			}
-			if !bytes.Equal(data, asset.Raw.SerializeUnmodified()) {
-				t.Fatalf("roundtrip mismatch")
+
+			if len(fixtures) == 0 {
+				t.Fatalf("no golden .uasset/.umap fixtures present in %s", parseDir)
+			}
+
+			for _, fixture := range fixtures {
+				fixture := fixture
+				t.Run(filepath.Base(fixture), func(t *testing.T) {
+					data, err := os.ReadFile(fixture)
+					if err != nil {
+						t.Fatalf("read fixture: %v", err)
+					}
+					asset, err := uasset.ParseBytes(data, opts)
+					if err != nil {
+						t.Fatalf("parse fixture: %v", err)
+					}
+					if !bytes.Equal(data, asset.Raw.SerializeUnmodified()) {
+						t.Fatalf("roundtrip mismatch")
+					}
+				})
 			}
 		})
 	}

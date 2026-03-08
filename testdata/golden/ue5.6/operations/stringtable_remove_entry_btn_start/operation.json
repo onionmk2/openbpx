@@ -1,0 +1,11 @@
+{
+	"command": "stringtable remove-entry",
+	"args":
+	{
+		"export": "1",
+		"key": "BTN_START"
+	},
+	"ue_procedure": "Remove BTN_START key from string table",
+	"expect": "byte_equal",
+	"notes": "Serialized StringTable BTN_START removal."
+}

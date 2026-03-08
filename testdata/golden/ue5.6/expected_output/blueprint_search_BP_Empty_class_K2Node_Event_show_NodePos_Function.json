@@ -1,0 +1,86 @@
+{
+  "argv": [
+    "blueprint",
+    "search",
+    "testdata/golden/parse/BP_Empty.uasset",
+    "--class",
+    "K2Node_Event",
+    "--show",
+    "NodePos,Function"
+  ],
+  "expected": {
+    "classFilter": "K2Node_Event",
+    "file": "testdata/golden/parse/BP_Empty.uasset",
+    "limit": 0,
+    "matchCount": 3,
+    "matches": [
+      {
+        "className": "K2Node_Event",
+        "export": 6,
+        "function": {
+          "customFunctionName": "",
+          "delegatePropertyName": "",
+          "eventMemberName": "ReceiveBeginPlay",
+          "eventMemberParent": "import:6:Actor",
+          "eventSignatureName": "",
+          "functionMemberName": "",
+          "functionMemberParent": ""
+        },
+        "graphName": "EventGraph",
+        "nodeGuid": "4666d957-00cf-48ce-a3bc-949c26034734",
+        "objectName": "K2Node_Event_0"
+      },
+      {
+        "className": "K2Node_Event",
+        "export": 7,
+        "function": {
+          "customFunctionName": "",
+          "delegatePropertyName": "",
+          "eventMemberName": "ReceiveActorBeginOverlap",
+          "eventMemberParent": "import:6:Actor",
+          "eventSignatureName": "",
+          "functionMemberName": "",
+          "functionMemberParent": ""
+        },
+        "graphName": "EventGraph",
+        "nodeGuid": "7eec80dd-5fe5-40b5-bcfc-49f31b786411",
+        "nodePos": {
+          "x": 0,
+          "y": 208
+        },
+        "objectName": "K2Node_Event_1"
+      },
+      {
+        "className": "K2Node_Event",
+        "export": 8,
+        "function": {
+          "customFunctionName": "",
+          "delegatePropertyName": "",
+          "eventMemberName": "ReceiveTick",
+          "eventMemberParent": "import:6:Actor",
+          "eventSignatureName": "",
+          "functionMemberName": "",
+          "functionMemberParent": ""
+        },
+        "graphName": "EventGraph",
+        "nodeGuid": "05ae12c5-05ee-4df4-8dbf-dfaae24cae8f",
+        "nodePos": {
+          "x": 0,
+          "y": 416
+        },
+        "objectName": "K2Node_Event_2"
+      }
+    ],
+    "memberFilter": "",
+    "nameFilter": "",
+    "show": [
+      "NodePos",
+      "Function"
+    ],
+    "warnings": []
+  },
+  "generatedAt": "2026-03-06T17:08:06Z",
+  "generatedBy": "scripts/gen_expected_output",
+  "name": "blueprint_search_BP_Empty_class_K2Node_Event_show_NodePos_Function",
+  "oracle": "ue-fixture"
+}

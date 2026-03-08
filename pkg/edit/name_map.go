@@ -58,7 +58,7 @@ func RewriteNameMap(asset *uasset.Asset, names []uasset.NameEntry) ([]byte, erro
 		newStart: newStart,
 	}}
 
-	summaryOffsets, err := scanSummaryOffsetFields(raw)
+	summaryOffsets, err := scanSummaryOffsetFields(raw, asset.Summary.FileVersionUE5)
 	if err != nil {
 		return nil, fmt.Errorf("scan summary offsets: %w", err)
 	}
@@ -96,7 +96,7 @@ func RewriteNameMap(asset *uasset.Asset, names []uasset.NameEntry) ([]byte, erro
 		}
 	}
 
-	countFields, err := scanSummaryNameCountFields(raw)
+	countFields, err := scanSummaryNameCountFields(raw, asset.Summary.FileVersionUE5)
 	if err != nil {
 		return nil, fmt.Errorf("scan summary name counts: %w", err)
 	}
@@ -115,8 +115,18 @@ func RewriteNameMap(asset *uasset.Asset, names []uasset.NameEntry) ([]byte, erro
 		if err != nil {
 			return nil, fmt.Errorf("read summary NamesReferencedFromExportDataCount: %w", err)
 		}
-		if current > newCount {
-			if err := writeInt32At(out, countFields.NamesReferencedFromExportDataCountPos, newCount, order); err != nil {
+		next := current
+		if len(names) < len(asset.Names) && current > 0 {
+			next -= int32(countRemovedPrefixNameEntries(asset.Names, names, int(current)))
+		}
+		if next > newCount {
+			next = newCount
+		}
+		if next < 0 {
+			next = 0
+		}
+		if next != current {
+			if err := writeInt32At(out, countFields.NamesReferencedFromExportDataCountPos, next, order); err != nil {
 				return nil, fmt.Errorf("patch summary NamesReferencedFromExportDataCount: %w", err)
 			}
 		}
@@ -144,6 +154,15 @@ func RewriteNameMap(asset *uasset.Asset, names []uasset.NameEntry) ([]byte, erro
 		}
 	}
 
+	if err := patchAssetRegistryDependencyOffset(raw, out, asset, func(oldPos int64) int64 {
+		return translateNameMapOffset(oldPos, patches)
+	}, false); err != nil {
+		return nil, err
+	}
+
+	if err := FinalizePackageBytes(out, asset.Summary.FileVersionUE5); err != nil {
+		return nil, fmt.Errorf("finalize package bytes: %w", err)
+	}
 	return out, nil
 }
 
@@ -224,6 +243,7 @@ func findNameMapEndOffset(asset *uasset.Asset, raw []byte) (int64, error) {
 		int64(asset.Summary.SoftPackageReferencesOffset),
 		int64(asset.Summary.SearchableNamesOffset),
 		int64(asset.Summary.ThumbnailTableOffset),
+		int64(asset.Summary.ImportTypeHierarchiesOffset),
 		int64(asset.Summary.AssetRegistryDataOffset),
 		int64(asset.Summary.PreloadDependencyOffset),
 		int64(asset.Summary.DataResourceOffset),
@@ -256,7 +276,7 @@ type summaryNameCountFields struct {
 	NamesReferencedFromExportDataCountPos int
 }
 
-func scanSummaryNameCountFields(data []byte) (summaryNameCountFields, error) {
+func scanSummaryNameCountFields(data []byte, unversionedFileUE5 int32) (summaryNameCountFields, error) {
 	fields := summaryNameCountFields{NamesReferencedFromExportDataCountPos: -1}
 	if len(data) < 4 {
 		return fields, fmt.Errorf("file too small")
@@ -300,7 +320,11 @@ func scanSummaryNameCountFields(data []byte) (summaryNameCountFields, error) {
 	}
 	if fileUE4 == 0 && fileUE5 == 0 && fileLicensee == 0 {
 		fileUE4 = ue4VersionUE56
-		fileUE5 = ue5OSSubObjectShadowSerialization
+		if unversionedFileUE5 >= ue5MinimumKnown {
+			fileUE5 = unversionedFileUE5
+		} else {
+			fileUE5 = ue5ImportTypeHierarchies
+		}
 	}
 	if fileUE5 >= ue5PackageSavedHash {
 		if err := r.skip(20); err != nil {
@@ -400,6 +424,14 @@ func scanSummaryNameCountFields(data []byte) (summaryNameCountFields, error) {
 	}
 	if _, err := r.readInt32(); err != nil { // ThumbnailTableOffset
 		return fields, err
+	}
+	if fileUE5 >= ue5ImportTypeHierarchies {
+		if _, err := r.readInt32(); err != nil { // ImportTypeHierarchiesCount
+			return fields, err
+		}
+		if _, err := r.readInt32(); err != nil { // ImportTypeHierarchiesOffset
+			return fields, err
+		}
 	}
 	if fileUE5 < ue5PackageSavedHash {
 		if err := r.skip(16); err != nil { // Guid
@@ -508,6 +540,40 @@ func isASCIIName(v string) bool {
 		}
 	}
 	return true
+}
+
+func countRemovedPrefixNameEntries(oldNames, newNames []uasset.NameEntry, prefixLen int) int {
+	if prefixLen <= 0 || len(oldNames) == 0 {
+		return 0
+	}
+	if prefixLen > len(oldNames) {
+		prefixLen = len(oldNames)
+	}
+
+	remaining := make(map[nameEntryKey]int, len(newNames))
+	for _, entry := range newNames {
+		key := nameEntryKey{
+			Value:              entry.Value,
+			NonCaseHash:        entry.NonCaseHash,
+			CasePreservingHash: entry.CasePreservingHash,
+		}
+		remaining[key]++
+	}
+
+	removed := 0
+	for _, entry := range oldNames[:prefixLen] {
+		key := nameEntryKey{
+			Value:              entry.Value,
+			NonCaseHash:        entry.NonCaseHash,
+			CasePreservingHash: entry.CasePreservingHash,
+		}
+		if remaining[key] > 0 {
+			remaining[key]--
+			continue
+		}
+		removed++
+	}
+	return removed
 }
 
 func ueStrCrc32ASCII(v []byte) uint32 {

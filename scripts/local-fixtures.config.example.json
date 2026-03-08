@@ -1,0 +1,20 @@
+{
+  "bpxRepoRoot": "\\\\wsl.localhost\\Ubuntu\\home\\<user>\\wilddog\\wilddog-bpx",
+  "engines": {
+    "5.6.1": {
+      "lyraRoot": "G:\\LyraStarterGame-5.6",
+      "ueEngineRoot": "G:\\UE\\5.6.1",
+      "editorCmdPath": "G:\\UE\\5.6.1\\Engine\\Binaries\\Win64\\UnrealEditor-Cmd.exe",
+      "goldenRoot": "G:\\path\\to\\wilddog-bpx\\testdata\\golden\\ue5.6"
+    },
+    "5.7.3": {
+      "lyraRoot": "G:\\LyraStarterGame-5.7",
+      "ueEngineRoot": "G:\\UE\\5.7.3",
+      "editorCmdPath": "G:\\UE\\5.7.3\\Engine\\Binaries\\Win64\\UnrealEditor-Cmd.exe",
+      "goldenRoot": "G:\\path\\to\\wilddog-bpx\\testdata\\golden\\ue5.7"
+    }
+  },
+  "scope": "1,2",
+  "include": "",
+  "skipEditorBuild": false
+}

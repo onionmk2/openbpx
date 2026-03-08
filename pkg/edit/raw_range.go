@@ -65,7 +65,7 @@ func RewriteRawRange(asset *uasset.Asset, start, end int64, replacement []byte) 
 		order = binary.BigEndian
 	}
 
-	summaryFields, err := scanSummaryOffsetFields(raw)
+	summaryFields, err := scanSummaryOffsetFields(raw, asset.Summary.FileVersionUE5)
 	if err != nil {
 		return nil, fmt.Errorf("scan summary offsets: %w", err)
 	}
@@ -129,6 +129,17 @@ func RewriteRawRange(asset *uasset.Asset, start, end int64, replacement []byte) 
 		}
 	}
 
+	fieldPos := int64(asset.Summary.AssetRegistryDataOffset)
+	fieldOverwritten := start < fieldPos+8 && end > fieldPos
+	if err := patchAssetRegistryDependencyOffset(raw, out, asset, func(oldPos int64) int64 {
+		return translateRawRangeOffset(oldPos, patch)
+	}, fieldOverwritten); err != nil {
+		return nil, err
+	}
+
+	if err := FinalizePackageBytes(out, asset.Summary.FileVersionUE5); err != nil {
+		return nil, fmt.Errorf("finalize package bytes: %w", err)
+	}
 	return out, nil
 }
 

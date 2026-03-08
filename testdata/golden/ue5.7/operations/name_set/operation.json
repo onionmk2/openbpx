@@ -1,0 +1,10 @@
+{
+  "command": "name set",
+  "args": {
+    "index": 1,
+    "value": "BP_Empty_Renamed"
+  },
+  "ue_procedure": "Update one NameMap entry in place",
+  "expect": "byte_equal",
+  "notes": "Low-level NameMap set fixture."
+}

@@ -3,6 +3,7 @@ package uasset
 import (
 	"encoding/binary"
 	"math"
+	"path/filepath"
 	"testing"
 )
 
@@ -222,6 +223,59 @@ func TestDecodePropertyValueSoftObjectPropertyByHeaderIndex(t *testing.T) {
 	}
 	if got := m["assetName"]; got != "BP_Test" {
 		t.Fatalf("assetName: got %v", got)
+	}
+}
+
+func TestDecodePropertyValueTaggedStructUsesParentImportResolution(t *testing.T) {
+	for _, root := range goldenParseFixtureRoots(t) {
+		root := root
+		t.Run(filepath.Base(root), func(t *testing.T) {
+			fixture := goldenParseFixturePath(root, "BP_Empty.uasset")
+			asset, err := ParseFile(fixture, DefaultParseOptions())
+			if err != nil {
+				t.Fatalf("parse fixture: %v", err)
+			}
+
+			props := asset.ParseExportProperties(5) // export 6 (K2Node_Event_0)
+			if len(props.Warnings) > 0 {
+				t.Fatalf("unexpected parse warnings: %v", props.Warnings)
+			}
+
+			var eventRef *PropertyTag
+			for i := range props.Properties {
+				if props.Properties[i].Name.Display(asset.Names) == "EventReference" {
+					eventRef = &props.Properties[i]
+					break
+				}
+			}
+			if eventRef == nil {
+				t.Fatalf("EventReference property not found")
+			}
+
+			decoded, ok := asset.DecodePropertyValue(*eventRef)
+			if !ok {
+				t.Fatalf("expected EventReference decode")
+			}
+			rootValue, ok := decoded.(map[string]any)
+			if !ok {
+				t.Fatalf("decoded EventReference type: got %T", decoded)
+			}
+			fields, ok := rootValue["value"].(map[string]any)
+			if !ok {
+				t.Fatalf("EventReference.value type: got %T", rootValue["value"])
+			}
+			memberParent, ok := fields["MemberParent"].(map[string]any)
+			if !ok {
+				t.Fatalf("MemberParent type: got %T", fields["MemberParent"])
+			}
+			objValue, ok := memberParent["value"].(map[string]any)
+			if !ok {
+				t.Fatalf("MemberParent.value type: got %T", memberParent["value"])
+			}
+			if got, want := objValue["resolved"], "import:6:Actor"; got != want {
+				t.Fatalf("MemberParent resolved: got %v want %v", got, want)
+			}
+		})
 	}
 }
 

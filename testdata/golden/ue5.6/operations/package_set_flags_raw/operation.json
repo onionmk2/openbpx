@@ -1,0 +1,10 @@
+{
+	"command": "package set-flags",
+	"args":
+	{
+		"flags": "537133056"
+	},
+	"ue_procedure": "Set package flags using raw numeric value without touching shape-sensitive bits",
+	"expect": "byte_equal",
+	"notes": "Raw numeric package flag update fixture."
+}

@@ -23,6 +23,8 @@ const (
 	ue5PayloadTOC                     = int32(1002)
 	ue5NamesFromExportData            = int32(1001)
 	ue5OSSubObjectShadowSerialization = int32(1017)
+	ue5ImportTypeHierarchies          = int32(1018)
+	ue5MinimumKnown                   = int32(1000)
 	ue4VersionUE56                    = int32(522)
 
 	packageFileTag        = uint32(0x9E2A83C1)

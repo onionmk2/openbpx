@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -21,14 +22,15 @@ type expectedCase struct {
 }
 
 const (
-	goldenExpectedOutputDir = "testdata/golden/expected_output"
-	defaultReportOutputDir  = "testdata/reports/generated_expected_output"
-	generatedFixtureOracle  = "bpx-generated"
+	defaultGoldenRootDir   = "testdata/golden"
+	defaultReportOutputDir = "testdata/reports/generated_expected_output"
+	generatedFixtureOracle = "bpx-generated"
 )
 
 func main() {
+	goldenRootFlag := flag.String("golden-root", defaultGoldenRootDir, "golden fixture root (single engine root with parse/operations, or parent containing ue*.* roots)")
 	outputDirFlag := flag.String("output-dir", defaultReportOutputDir, "output directory for generated expected-output fixtures")
-	allowGoldenOverwrite := flag.Bool("allow-golden-overwrite", false, "allow writing directly to testdata/golden/expected_output")
+	allowGoldenOverwrite := flag.Bool("allow-golden-overwrite", false, "allow writing directly to <golden-root>/expected_output")
 	flag.Parse()
 	if flag.NArg() != 0 {
 		die("arguments", fmt.Errorf("unexpected positional arguments: %v", flag.Args()))
@@ -38,22 +40,21 @@ func main() {
 	if err != nil {
 		die("getwd", err)
 	}
+	goldenRootAbs := filepath.Clean(*goldenRootFlag)
+	if !filepath.IsAbs(goldenRootAbs) {
+		goldenRootAbs = filepath.Join(repoRoot, goldenRootAbs)
+	}
+	goldenRootAbs = filepath.Clean(goldenRootAbs)
 	outputDir := *outputDirFlag
 	if !filepath.IsAbs(outputDir) {
 		outputDir = filepath.Join(repoRoot, outputDir)
 	}
 	outputDir = filepath.Clean(outputDir)
-	goldenDir := filepath.Clean(filepath.Join(repoRoot, goldenExpectedOutputDir))
-	if outputDir == goldenDir && !*allowGoldenOverwrite {
-		die(
-			"output-dir",
-			fmt.Errorf("refusing to overwrite %s without --allow-golden-overwrite; write to %s instead", goldenExpectedOutputDir, defaultReportOutputDir),
-		)
+
+	roots, rootMode, err := resolveGoldenRoots(goldenRootAbs)
+	if err != nil {
+		die("resolve golden roots", err)
 	}
-	if err := os.MkdirAll(outputDir, 0o755); err != nil {
-		die("mkdir expected_output", err)
-	}
-	generatedAt := time.Now().UTC().Format(time.RFC3339)
 
 	cases := []expectedCase{
 		{Name: "find_assets_parse_recursive", Argv: []string{"find", "assets", "testdata/golden/parse", "--pattern", "*.uasset", "--recursive"}},
@@ -101,7 +102,9 @@ func main() {
 		{Name: "stringtable_read_ST_UI", Argv: []string{"stringtable", "read", "testdata/golden/parse/ST_UI.uasset"}},
 		{Name: "class_BP_Empty_export2", Argv: []string{"class", "testdata/golden/parse/BP_Empty.uasset", "--export", "2"}},
 		{Name: "level_info_L_Minimal_export1", Argv: []string{"level", "info", "testdata/golden/parse/L_Minimal.umap", "--export", "1"}},
+		{Name: "level_actor_search_L_Minimal_actor_class_LyraWorldSettings", Argv: []string{"level", "actor-search", "testdata/golden/parse/L_Minimal.umap", "--actor-class", "LyraWorldSettings"}},
 		{Name: "level_var_list_L_Minimal_LyraWorldSettings", Argv: []string{"level", "var-list", "testdata/golden/parse/L_Minimal.umap", "--actor", "LyraWorldSettings"}},
+		{Name: "material_read_MI_Chrome", Argv: []string{"material", "read", "testdata/golden/parse/MI_Chrome.uasset"}},
 		{Name: "raw_BP_Empty_export2", Argv: []string{"raw", "testdata/golden/parse/BP_Empty.uasset", "--export", "2"}},
 
 		{Name: "prop_list_BP_Empty_export1", Argv: []string{"prop", "list", "testdata/golden/parse/BP_Empty.uasset", "--export", "1"}},
@@ -130,16 +133,41 @@ func main() {
 		{Name: "blueprint_call_args_BP_Empty_member_OpenLevelBySoftObjectPtr", Argv: []string{"blueprint", "call-args", "testdata/golden/parse/BP_Empty.uasset", "--member", "OpenLevelBySoftObjectPtr"}},
 		{Name: "blueprint_refs_BP_Empty_softpath_L_TestTitle", Argv: []string{"blueprint", "refs", "testdata/golden/parse/BP_Empty.uasset", "--soft-path", "/Game/BPXFixtures/Maps/L_TestTitle"}},
 		{Name: "blueprint_search_BP_Empty_class_K2Node_Event_show_NodePos_Function", Argv: []string{"blueprint", "search", "testdata/golden/parse/BP_Empty.uasset", "--class", "K2Node_Event", "--show", "NodePos,Function"}},
+		{Name: "blueprint_infer_pack_BP_WithFunctions_export5", Argv: []string{"blueprint", "infer-pack", "testdata/golden/parse/BP_WithFunctions.uasset", "--export", "5", "--out", "testdata/reports/infer_pack_fixture"}},
 		{Name: "blueprint_scan_functions_parse_recursive", Argv: []string{"blueprint", "scan-functions", "testdata/golden/parse", "--recursive"}},
 		{Name: "blueprint_scan_functions_parse_recursive_aggregate", Argv: []string{"blueprint", "scan-functions", "testdata/golden/parse", "--recursive", "--aggregate"}},
 		{Name: "metadata_BP_WithMetadata_export1", Argv: []string{"metadata", "testdata/golden/parse/BP_WithMetadata.uasset", "--export", "1"}},
 		{Name: "validate_BP_Empty", Argv: []string{"validate", "testdata/golden/parse/BP_Empty.uasset"}},
 		{Name: "validate_BP_Empty_binary_equality", Argv: []string{"validate", "testdata/golden/parse/BP_Empty.uasset", "--binary-equality"}},
 	}
+	generatedAt := time.Now().UTC().Format(time.RFC3339)
+	for _, root := range roots {
+		rootForArgv := root
+		if rel, err := filepath.Rel(repoRoot, root); err == nil && !pathEscapesRepo(rel) {
+			rootForArgv = rel
+		}
 
-	for _, tc := range cases {
-		if err := runCase(outputDir, generatedAt, tc); err != nil {
-			die(tc.Name, err)
+		rootOutputDir := outputDir
+		if rootMode == goldenRootModeParent {
+			rootOutputDir = filepath.Join(outputDir, filepath.Base(root))
+		}
+		rootExpectedDir := filepath.Clean(filepath.Join(root, "expected_output"))
+		if filepath.Clean(rootOutputDir) == rootExpectedDir && !*allowGoldenOverwrite {
+			die(
+				"output-dir",
+				fmt.Errorf("refusing to overwrite %s without --allow-golden-overwrite; write to %s instead", filepath.ToSlash(rootExpectedDir), defaultReportOutputDir),
+			)
+		}
+		if err := os.MkdirAll(rootOutputDir, 0o755); err != nil {
+			die("mkdir expected_output", err)
+		}
+
+		for _, tc := range cases {
+			tc := tc
+			tc.Argv = rewriteArgvForGoldenRoot(tc.Argv, rootForArgv)
+			if err := runCase(rootOutputDir, generatedAt, tc); err != nil {
+				die(fmt.Sprintf("%s (%s)", tc.Name, filepath.Base(root)), err)
+			}
 		}
 	}
 }
@@ -184,6 +212,78 @@ func runCase(outputDir, generatedAt string, tc expectedCase) error {
 }
 
 var nonFileChars = regexp.MustCompile(`[^a-zA-Z0-9._-]+`)
+
+type goldenRootMode int
+
+const (
+	goldenRootModeSingle goldenRootMode = iota
+	goldenRootModeParent
+)
+
+func resolveGoldenRoots(goldenRootAbs string) ([]string, goldenRootMode, error) {
+	if hasRequiredGoldenSubdirs(goldenRootAbs) {
+		return []string{goldenRootAbs}, goldenRootModeSingle, nil
+	}
+
+	entries, err := os.ReadDir(goldenRootAbs)
+	if err != nil {
+		return nil, goldenRootModeParent, fmt.Errorf("read golden root dir: %w", err)
+	}
+
+	roots := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		candidate := filepath.Join(goldenRootAbs, entry.Name())
+		if hasRequiredGoldenSubdirs(candidate) {
+			roots = append(roots, candidate)
+		}
+	}
+	sort.Strings(roots)
+	if len(roots) == 0 {
+		return nil, goldenRootModeParent, fmt.Errorf("no golden fixture roots found under %s", filepath.ToSlash(goldenRootAbs))
+	}
+	return roots, goldenRootModeParent, nil
+}
+
+func hasRequiredGoldenSubdirs(root string) bool {
+	return hasDir(filepath.Join(root, "parse")) && hasDir(filepath.Join(root, "operations"))
+}
+
+func hasDir(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+	return info.IsDir()
+}
+
+func pathEscapesRepo(rel string) bool {
+	rel = filepath.ToSlash(filepath.Clean(rel))
+	return rel == ".." || strings.HasPrefix(rel, "../")
+}
+
+func rewriteArgvForGoldenRoot(argv []string, goldenRoot string) []string {
+	oldRoot := filepath.ToSlash(filepath.Clean(defaultGoldenRootDir))
+	newRoot := filepath.ToSlash(filepath.Clean(goldenRoot))
+	if oldRoot == newRoot {
+		out := make([]string, len(argv))
+		copy(out, argv)
+		return out
+	}
+
+	out := make([]string, len(argv))
+	copy(out, argv)
+	prefix := oldRoot + "/"
+	for i := range out {
+		token := filepath.ToSlash(out[i])
+		if strings.HasPrefix(token, prefix) {
+			out[i] = newRoot + token[len(oldRoot):]
+		}
+	}
+	return out
+}
 
 func sanitize(name string) string {
 	out := nonFileChars.ReplaceAllString(name, "_")

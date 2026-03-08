@@ -1,0 +1,10 @@
+{
+	"command": "package set-flags",
+	"args":
+	{
+		"flags": "0"
+	},
+	"ue_procedure": "Clear non-shape-sensitive package flags using raw zero",
+	"expect": "byte_equal",
+	"notes": "Raw zero package flag update fixture."
+}

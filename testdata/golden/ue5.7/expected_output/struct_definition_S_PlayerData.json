@@ -1,0 +1,100 @@
+{
+  "argv": [
+    "struct",
+    "definition",
+    "testdata/golden/parse/S_PlayerData.uasset"
+  ],
+  "expected": {
+    "count": 2,
+    "file": "testdata/golden/parse/S_PlayerData.uasset",
+    "structs": [
+      {
+        "classIndex": -1,
+        "className": "UserDefinedStruct",
+        "index": 1,
+        "objectName": "S_PlayerData",
+        "outerIndex": 0,
+        "properties": [
+          {
+            "arrayIndex": 0,
+            "flags": 0,
+            "name": "EditorData",
+            "offset": 2506,
+            "size": 4,
+            "type": "ObjectProperty",
+            "value": {
+              "index": 2,
+              "resolved": "export:2:UserDefinedStructEditorData_0"
+            },
+            "valueOffset": 2531
+          },
+          {
+            "arrayIndex": 0,
+            "flags": 8,
+            "name": "Guid",
+            "offset": 2535,
+            "size": 16,
+            "type": "StructProperty(Guid(/Script/CoreUObject))",
+            "value": {
+              "structType": "Guid",
+              "value": "785b56d3-d71a-4ed8-8796-b58fc22475ed"
+            },
+            "valueOffset": 2584
+          }
+        ],
+        "serial": {
+          "offset": 2505,
+          "scriptSerializationEnd": 103,
+          "scriptSerializationStart": 0,
+          "size": 261
+        },
+        "superIndex": 0,
+        "warnings": null
+      },
+      {
+        "classIndex": -2,
+        "className": "UserDefinedStructEditorData",
+        "index": 2,
+        "objectName": "UserDefinedStructEditorData_0",
+        "outerIndex": 1,
+        "properties": [
+          {
+            "arrayIndex": 0,
+            "flags": 0,
+            "name": "UniqueNameId",
+            "offset": 2767,
+            "size": 4,
+            "type": "UInt32Property",
+            "value": 1,
+            "valueOffset": 2792
+          },
+          {
+            "arrayIndex": 0,
+            "flags": 0,
+            "name": "VariablesDescriptions",
+            "offset": 2796,
+            "size": 798,
+            "type": "ArrayProperty(StructProperty(StructVariableDescription(/Script/UnrealEd)))",
+            "value": {
+              "arrayType": "StructProperty",
+              "rawBase64": "AQAAADQAAAAAAAAAHwAAAAAAAAAAAAAACAAAAAAdAAAAAAAAADIAAAAAAAAAJwAAAAAAAAABAAAAGwAAAAAAAAABAAAAAQAAAAAAAAAAAAAAEAAAAAhLUQJ9bIMEQoaaByzFxWWPGgAAAAAAAAAmAAAAAAAAAAAAAAAQAAAAAAwAAABNZW1iZXJWYXJfMAATAAAAAAAAACYAAAAAAAAAAAAAAAoAAAAABgAAAEZhbHNlABAAAAAAAAAAHwAAAAAAAAAAAAAACAAAAAAKAAAAAAAAACkAAAAAAAAAHwAAAAAAAAAAAAAACAAAAAAgAAAAAAAAACoAAAAAAAAAJQAAAAAAAAAAAAAABAAAAAAAAAAAIwAAAAAAAAAnAAAAAAAAAAEAAAAVAAAAAAAAAAEAAAACAAAAAAAAAAAAAACyAAAAACsAAAAAAAAAHwAAAAAAAAAAAAAACAAAAAAgAAAAAAAAACwAAAAAAAAAHwAAAAAAAAAAAAAACAAAAAAgAAAAAAAAAC0AAAAAAAAAIQAAAAAAAAAAAAAABAAAAAAAAAAADAAAAAAAAAALAAAAAAAAAAAAAAAAAAAAAA4AAAAAAAAACwAAAAAAAAAAAAAAAAAAAAANAAAAAAAAAAsAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAARAAAAAAAAABcAAAAAAAAAAgAAABgAAAAAAAAAAQAAAAIAAAAAAAAAAAAAAA8AAAAAAAAAAAAAAAgAAAAAGQAAAAAAAAAFAAAAAAAAAAsAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAALAAAAAAAAAAAAAAAAAAAAAAcAAAAAAAAACwAAAAAAAAAAAAAAAAAAAAAGAAAAAAAAAAsAAAAAAAAAAAAAAAAAAAAAEgAAAAAAAAAmAAAAAAAAAAAAAAAKAAAAAAYAAABGYWxzZQAuAAAAAAAAACYAAAAAAAAAAAAAAAQAAAAAAAAAAB4AAAAAAAAAHAAAAAAAAAACAAAAHwAAAAAAAAAAAAAAJgAAAAAAAAAAAAAACAAAAAAAAAAAAAAAACAAAAAAAAAA"
+            },
+            "valueOffset": 2857
+          }
+        ],
+        "serial": {
+          "offset": 2766,
+          "scriptSerializationEnd": 897,
+          "scriptSerializationStart": 0,
+          "size": 901
+        },
+        "superIndex": 0,
+        "warnings": null
+      }
+    ]
+  },
+  "generatedAt": "2026-03-06T17:08:06Z",
+  "generatedBy": "scripts/gen_expected_output",
+  "name": "struct_definition_S_PlayerData",
+  "oracle": "ue-fixture"
+}

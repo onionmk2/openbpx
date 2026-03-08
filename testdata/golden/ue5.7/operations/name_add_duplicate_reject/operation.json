@@ -1,0 +1,10 @@
+{
+  "command": "name add",
+  "args": {
+    "value": "None"
+  },
+  "ue_procedure": "Reject duplicate NameMap append",
+  "expect": "error_equal",
+  "error_contains": "already exists",
+  "notes": "NameMap add must reject duplicate values."
+}

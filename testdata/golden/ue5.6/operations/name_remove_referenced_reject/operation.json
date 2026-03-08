@@ -1,0 +1,10 @@
+{
+  "command": "name remove",
+  "args": {
+    "index": "102"
+  },
+  "ue_procedure": "Reject referenced tail NameMap removal",
+  "expect": "error_equal",
+  "error_contains": "still referenced",
+  "notes": "NameMap remove must reject referenced tail entries."
+}

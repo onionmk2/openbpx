@@ -1,0 +1,10 @@
+{
+  "command": "name set",
+  "args": {
+    "index": "4",
+    "value": "BPX_Name_Ascii"
+  },
+  "ue_procedure": "Update one NameMap entry to alternate ASCII text",
+  "expect": "byte_equal",
+  "notes": "Low-level ASCII NameMap set fixture."
+}

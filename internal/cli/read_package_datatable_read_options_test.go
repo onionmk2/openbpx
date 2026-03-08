@@ -12,7 +12,7 @@ import (
 )
 
 func TestDataTableReadDefaultReturnsAllRows(t *testing.T) {
-	fixturePath := filepath.Join("..", "..", "testdata", "golden", "operations", "dt_add_row", "before.uasset")
+	fixturePath := goldenOperationFixturePath(t, "dt_add_row", "before.uasset")
 	table := runDataTableReadTable(t, fixturePath)
 
 	if got := strings.TrimSpace(anyToString(table["className"])); got != "DataTable" {
@@ -27,7 +27,7 @@ func TestDataTableReadDefaultReturnsAllRows(t *testing.T) {
 }
 
 func TestDataTableReadRowFiltering(t *testing.T) {
-	fixturePath := filepath.Join("..", "..", "testdata", "golden", "operations", "dt_add_row", "before.uasset")
+	fixturePath := goldenOperationFixturePath(t, "dt_add_row", "before.uasset")
 
 	t.Run("single row", func(t *testing.T) {
 		table := runDataTableReadTable(t, fixturePath, "--row", "Row_B")
@@ -111,7 +111,7 @@ func TestDataTableCommandUsageValidation(t *testing.T) {
 }
 
 func TestDataTableReadFormatOutput(t *testing.T) {
-	fixturePath := filepath.Join("..", "..", "testdata", "golden", "operations", "dt_add_row", "before.uasset")
+	fixturePath := goldenOperationFixturePath(t, "dt_add_row", "before.uasset")
 
 	t.Run("csv stdout", func(t *testing.T) {
 		var stdout bytes.Buffer
@@ -217,7 +217,7 @@ func TestDataTableReadFormatOutput(t *testing.T) {
 }
 
 func TestDataTableDecodeSubcommandIsRejected(t *testing.T) {
-	fixturePath := filepath.Join("..", "..", "testdata", "golden", "operations", "dt_add_row", "before.uasset")
+	fixturePath := goldenOperationFixturePath(t, "dt_add_row", "before.uasset")
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	code := Run([]string{"datatable", "decode", fixturePath}, &stdout, &stderr)

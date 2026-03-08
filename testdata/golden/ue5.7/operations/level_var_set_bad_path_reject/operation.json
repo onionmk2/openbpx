@@ -1,0 +1,12 @@
+{
+  "command": "level var-set",
+  "args": {
+    "actor": "LyraWorldSettings",
+    "path": "MissingProp",
+    "value": "0"
+  },
+  "ue_procedure": "Reject level var-set when property path is absent",
+  "expect": "error_equal",
+  "error_contains": "property not found",
+  "notes": "Level var-set must fail for missing property paths."
+}

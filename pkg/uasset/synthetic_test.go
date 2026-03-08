@@ -1,6 +1,7 @@
 package uasset
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -51,5 +52,55 @@ func TestVersionWindow(t *testing.T) {
 	rejectedFixture := filepath.Join(syntheticDir, "BP_FutureVersion.uasset")
 	if _, err := ParseFile(rejectedFixture, DefaultParseOptions()); err == nil {
 		t.Fatalf("expected future-version fixture to be rejected")
+	} else if !strings.Contains(err.Error(), "unsupported fileVersionUE5=9999") {
+		t.Fatalf("expected version-window rejection, got: %v", err)
+	}
+}
+
+func TestSyntheticInWindowVersionFixturesRoundTrip(t *testing.T) {
+	syntheticDir := filepath.Join("..", "..", "testdata", "synthetic")
+	fixtures := []struct {
+		name        string
+		fileUE5     int32
+		engineMinor uint16
+	}{
+		{name: "BP_UE54.uasset", fileUE5: 1009, engineMinor: 4},
+		{name: "BP_UE55.uasset", fileUE5: 1014, engineMinor: 5},
+	}
+
+	opts := DefaultParseOptions()
+	for _, fixture := range fixtures {
+		fixture := fixture
+		t.Run(fixture.name, func(t *testing.T) {
+			path := filepath.Join(syntheticDir, fixture.name)
+			data, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("read fixture: %v", err)
+			}
+
+			asset, err := ParseBytes(data, opts)
+			if err != nil {
+				t.Fatalf("parse fixture: %v", err)
+			}
+			if got, want := asset.Summary.FileVersionUE5, fixture.fileUE5; got != want {
+				t.Fatalf("fileVersionUE5: got %d want %d", got, want)
+			}
+			if got, want := asset.Summary.SavedByEngineVersion.Minor, fixture.engineMinor; got != want {
+				t.Fatalf("saved engine minor: got %d want %d", got, want)
+			}
+
+			serialized := asset.Raw.SerializeUnmodified()
+			if !bytes.Equal(data, serialized) {
+				t.Fatalf("roundtrip mismatch")
+			}
+
+			reparsed, err := ParseBytes(serialized, opts)
+			if err != nil {
+				t.Fatalf("reparse roundtrip bytes: %v", err)
+			}
+			if got, want := reparsed.Summary.FileVersionUE5, fixture.fileUE5; got != want {
+				t.Fatalf("reparsed fileVersionUE5: got %d want %d", got, want)
+			}
+		})
 	}
 }
